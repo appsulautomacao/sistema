@@ -84,6 +84,11 @@ def build_pagbank_checkout_payload(session, plan, webhook_url=None, return_url=N
     if expires_at:
         expiration_value = expires_at.replace(tzinfo=timezone.utc).astimezone().isoformat()
 
+    metadata = session.metadata_json or {}
+    item_name = plan.name
+    if metadata.get("coupon_trial_days"):
+        item_name = f"{plan.name} - teste {metadata.get('coupon_trial_days')} dias"
+
     payload = {
         "reference_id": session.public_token,
         "customer": {
@@ -94,7 +99,7 @@ def build_pagbank_checkout_payload(session, plan, webhook_url=None, return_url=N
         "items": [
             {
                 "reference_id": plan.code,
-                "name": plan.name,
+                "name": item_name,
                 "quantity": 1,
                 "unit_amount": session.amount_cents,
             }
@@ -121,7 +126,7 @@ def build_pagbank_checkout_payload(session, plan, webhook_url=None, return_url=N
         payload["return_url"] = effective_return_url
 
     recurrence_plan = _build_recurrence_plan(plan)
-    if recurrence_plan and session.payment_method == "card":
+    if recurrence_plan and session.payment_method == "card" and not metadata.get("coupon_trial_days"):
         payload["recurrence_plan"] = recurrence_plan
 
     payload["notification_urls"] = [item for item in payload["notification_urls"] if item]

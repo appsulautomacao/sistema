@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import os
 import secrets
 
 from db import db
@@ -9,6 +10,54 @@ from models import (
     PaymentTransaction,
     Subscription,
 )
+
+
+def format_brl(cents):
+    value = (cents or 0) / 100
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _configured_test_coupon():
+    code = (os.getenv("COMMERCIAL_TEST_COUPON_CODE") or "TESTE3DIAS").strip().upper()
+    if not code:
+        return None
+
+    try:
+        price_cents = int(os.getenv("COMMERCIAL_TEST_COUPON_PRICE_CENTS", "500"))
+    except ValueError:
+        price_cents = 500
+
+    try:
+        trial_days = int(os.getenv("COMMERCIAL_TEST_COUPON_DAYS", "3"))
+    except ValueError:
+        trial_days = 3
+
+    trial_days = max(trial_days, 1)
+    return {
+        "code": code,
+        "final_amount_cents": max(price_cents, 100),
+        "trial_days": trial_days,
+        "description": f"Teste de {trial_days} dias",
+    }
+
+
+def apply_checkout_coupon(coupon_code, original_amount_cents):
+    normalized_code = (coupon_code or "").strip().upper()
+    if not normalized_code:
+        return None
+
+    coupon = _configured_test_coupon()
+    if not coupon or normalized_code != coupon["code"]:
+        raise ValueError("Cupom invalido ou expirado.")
+
+    final_amount_cents = min(original_amount_cents, coupon["final_amount_cents"])
+    discount_cents = max(original_amount_cents - final_amount_cents, 0)
+    return {
+        **coupon,
+        "discount_cents": discount_cents,
+        "original_amount_cents": original_amount_cents,
+        "final_amount_cents": final_amount_cents,
+    }
 
 
 DEFAULT_BILLING_PLANS = [
@@ -96,6 +145,7 @@ def get_billing_plan_by_code(plan_code):
 
 def build_checkout_metadata(session, plan=None):
     selected_plan = plan or session.plan
+    metadata = session.metadata_json or {}
     return {
         "checkout_session_token": session.public_token,
         "plan_code": selected_plan.code,
@@ -105,6 +155,7 @@ def build_checkout_metadata(session, plan=None):
         "company_name": session.company_name,
         "admin_name": session.admin_name,
         "admin_email": session.admin_email,
+        **metadata,
     }
 
 
@@ -116,6 +167,7 @@ def create_checkout_session(
     customer_document=None,
     payment_method="card",
     installment_count=1,
+    coupon_code=None,
     provider="pagseguro",
     success_url=None,
     cancel_url=None,
@@ -142,6 +194,21 @@ def create_checkout_session(
     if installments > plan.max_installments:
         raise ValueError("Parcelamento acima do permitido para este plano.")
 
+    original_amount_cents = plan.price_cents + (plan.setup_fee_cents or 0)
+    coupon = apply_checkout_coupon(coupon_code, original_amount_cents) if coupon_code else None
+    final_amount_cents = coupon["final_amount_cents"] if coupon else original_amount_cents
+    metadata_json = {
+        "original_amount_cents": original_amount_cents,
+        "final_amount_cents": final_amount_cents,
+    }
+    if coupon:
+        metadata_json.update({
+            "coupon_code": coupon["code"],
+            "coupon_description": coupon["description"],
+            "coupon_discount_cents": coupon["discount_cents"],
+            "coupon_trial_days": coupon["trial_days"],
+        })
+
     session = CheckoutSession(
         public_token=secrets.token_urlsafe(24),
         plan_id=plan.id,
@@ -151,12 +218,13 @@ def create_checkout_session(
         customer_document=(customer_document or "").strip() or None,
         payment_method=method,
         installment_count=installments,
-        amount_cents=plan.price_cents + (plan.setup_fee_cents or 0),
+        amount_cents=final_amount_cents,
         currency=plan.currency,
         status="created",
         provider=provider,
         success_url=success_url,
         cancel_url=cancel_url,
+        metadata_json=metadata_json,
         expires_at=datetime.utcnow() + timedelta(hours=24),
     )
     session.metadata_json = build_checkout_metadata(session, plan=plan)
@@ -199,6 +267,16 @@ def _calculate_period_end(started_at, billing_cycle_months, billing_period):
     return started_at + timedelta(days=30 * months)
 
 
+def _checkout_trial_days(checkout_session):
+    if not checkout_session or not checkout_session.metadata_json:
+        return None
+    try:
+        trial_days = int(checkout_session.metadata_json.get("coupon_trial_days") or 0)
+    except (TypeError, ValueError):
+        return None
+    return trial_days if trial_days > 0 else None
+
+
 def activate_company_subscription(
     company_id,
     billing_event,
@@ -224,6 +302,9 @@ def activate_company_subscription(
         billing_cycle_months=selected_plan.billing_cycle_months,
         billing_period=selected_plan.billing_period,
     )
+    trial_days = _checkout_trial_days(checkout_session)
+    if trial_days:
+        period_end = started_at + timedelta(days=trial_days)
 
     active_subscription = Subscription.query.filter(
         Subscription.company_id == company_id,
@@ -244,6 +325,8 @@ def activate_company_subscription(
         subscription.metadata_json = {
             "source": "billing_webhook",
             "plan_code": selected_plan.code,
+            "coupon_code": (checkout_session.metadata_json or {}).get("coupon_code") if checkout_session else None,
+            "trial_days": trial_days,
         }
     else:
         subscription = Subscription(
@@ -261,6 +344,8 @@ def activate_company_subscription(
             metadata_json={
                 "source": "billing_webhook",
                 "plan_code": selected_plan.code,
+                "coupon_code": (checkout_session.metadata_json or {}).get("coupon_code") if checkout_session else None,
+                "trial_days": trial_days,
             },
         )
         db.session.add(subscription)

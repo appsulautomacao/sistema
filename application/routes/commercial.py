@@ -4,6 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from core.commercial_service import (
     create_checkout_session,
+    format_brl,
     get_checkout_session_by_token,
     list_public_billing_plans,
     register_provider_checkout,
@@ -32,6 +33,7 @@ def start_checkout():
     customer_document = (request.form.get("customer_document") or "").strip()
     payment_method = (request.form.get("payment_method") or "card").strip().lower()
     installment_count = request.form.get("installment_count") or "1"
+    coupon_code = (request.form.get("coupon_code") or "").strip()
 
     if not plan_code or not company_name or not admin_email:
         flash("Informe plano, empresa e e-mail do responsavel.", "warning")
@@ -46,6 +48,7 @@ def start_checkout():
             customer_document=customer_document,
             payment_method=payment_method,
             installment_count=installment_count,
+            coupon_code=coupon_code,
             success_url=url_for("commercial.checkout_status", public_token="__token__", _external=True),
             cancel_url=url_for("commercial.plans", _external=True),
         )
@@ -77,6 +80,10 @@ def checkout_status(public_token):
         "plan_code": session.plan.code,
         "payment_method": session.payment_method,
         "installments": session.installment_count,
+        "amount_cents": session.amount_cents,
+        "amount_display": session.amount_display,
+        "coupon_code": metadata_json.get("coupon_code"),
+        "coupon_trial_days": metadata_json.get("coupon_trial_days"),
     }
 
     return render_template(
@@ -86,6 +93,7 @@ def checkout_status(public_token):
         checkout_payload=checkout_payload,
         pay_url=metadata_json.get("pay_url"),
         pagbank_configured=pagbank_is_configured(),
+        format_brl=format_brl,
     )
 
 

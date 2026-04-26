@@ -23,7 +23,16 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <strong>Valor</strong>
-                            <div>{{ plan.price_display }}</div>
+                            <div>{{ session.amount_display }}</div>
+                            {% if session.metadata_json and session.metadata_json.get("coupon_code") %}
+                            <div class="text-success small">
+                                Cupom {{ session.metadata_json.get("coupon_code") }} aplicado:
+                                {{ format_brl(session.metadata_json.get("coupon_discount_cents")) }} de desconto
+                            </div>
+                            <div class="text-muted small">
+                                Valor original: {{ format_brl(session.metadata_json.get("original_amount_cents")) }}
+                            </div>
+                            {% endif %}
                             <div class="text-muted small">{{ plan.billing_period }}</div>
                         </div>
                     </div>
@@ -39,6 +48,9 @@
                             <strong>Pagamento</strong>
                             <div>{{ session.payment_method }}</div>
                             <div class="text-muted small">{{ session.installment_count }}x</div>
+                            {% if session.metadata_json and session.metadata_json.get("coupon_trial_days") %}
+                            <div class="text-muted small">Teste por {{ session.metadata_json.get("coupon_trial_days") }} dias</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

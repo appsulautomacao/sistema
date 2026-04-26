@@ -494,6 +494,11 @@ class CheckoutSession(db.Model):
     billing_events = db.relationship("BillingEvent", back_populates="checkout_session")
     payment_transactions = db.relationship("PaymentTransaction", back_populates="checkout_session")
 
+    @property
+    def amount_display(self):
+        value = (self.amount_cents or 0) / 100
+        return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 
 class Subscription(db.Model):
     __tablename__ = "subscriptions"
