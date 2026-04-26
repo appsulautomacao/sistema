@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-1">RAG da Empresa</h3>
+    <div class="text-muted">Valide o arquivo de conhecimento da empresa antes de usar no pré-atendimento.</div>
+  </div>
+  <a class="btn btn-outline-secondary" href="/admin/settings">Configurar caminho do arquivo</a>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <div class="mb-2"><strong>Empresa:</strong> {{ company.name }}</div>
+  <div><strong>Arquivo configurado:</strong> {{ search_result.configured_path or company.rag_document_path or 'Nenhum arquivo configurado' }}</div>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5 class="mb-3">Teste de busca</h5>
+  <form method="GET" class="row g-2">
+    <div class="col-md-10">
+      <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="Ex.: horario de atendimento, entrega em Blumenau, preço do boleto, braile">
+    </div>
+    <div class="col-md-2 d-grid">
+      <button class="btn btn-primary">Buscar contexto</button>
+    </div>
+  </form>
+</div>
+
+<div class="card shadow-sm p-3">
+  <h5 class="mb-3">Trechos encontrados</h5>
+
+  {% if not (search_result.configured_path or company.rag_document_path) %}
+    <div class="empty-state">Configure primeiro o caminho do arquivo RAG em Configurações.</div>
+  {% elif not query %}
+    <div class="empty-state">Digite uma pergunta para testar a recuperação de contexto.</div>
+  {% elif search_result.results %}
+    <div class="ai-audit-list">
+      {% for item in search_result.results %}
+        <div class="ai-audit-item">
+          <div class="ai-audit-head">
+            <div class="ai-audit-meta">
+              <span class="ai-pill">Trecho #{{ item.index }}</span>
+              <span class="ai-pill ai-pill-primary">Score {{ item.score }}</span>
+            </div>
+          </div>
+          <div class="ai-audit-block">
+            <div class="ai-audit-text">{{ item.content }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">Nenhum trecho relevante encontrado para esta busca.</div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,29 @@
+.env
+.env.*
+!.env.example
+!.env.vps.example
+
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+.git/
+.gitignore
+
+docs/
+teste_html/
+ssh/
+
+uploads/
+storage/
+files_rag/
+
+*.tmp
+.tmp_*
+tmp_*
+*.log
+
+resumo do projeto_GPT.txt
+o que falt.TXT

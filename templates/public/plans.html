@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row align-items-start mb-4">
+    <div class="col-lg-7">
+        <h1 class="mb-3">Planos e formas de pagamento</h1>
+        <p class="text-muted mb-0">
+            Escolha o plano comercial e a forma de pagamento. O checkout registra mensal, anual,
+            a vista e parcelamento para o webhook ativar a empresa com o plano certo.
+        </p>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for plan in plans %}
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                {% if plan.highlight_text %}
+                <span class="badge text-bg-warning mb-3">{{ plan.highlight_text }}</span>
+                {% endif %}
+                <h5 class="card-title">{{ plan.name }}</h5>
+                <div class="display-6 mb-2">{{ plan.price_display }}</div>
+                <p class="text-muted">{{ plan.description }}</p>
+                <ul class="small text-muted ps-3">
+                    <li>Periodo: {{ plan.billing_period }}</li>
+                    <li>Parcelamento maximo: {{ plan.max_installments }}x</li>
+                    <li>PIX: {{ "sim" if plan.allow_pix else "nao" }}</li>
+                    <li>Boleto: {{ "sim" if plan.allow_boleto else "nao" }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <h4 class="mb-3">Iniciar checkout comercial</h4>
+        <form method="POST" action="{{ url_for('commercial.start_checkout') }}" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Plano</label>
+                <select class="form-select" name="plan_code" required>
+                    <option value="">Selecione</option>
+                    {% for plan in plans %}
+                    <option value="{{ plan.code }}">{{ plan.name }} - {{ plan.price_display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Empresa</label>
+                <input class="form-control" type="text" name="company_name" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Responsavel</label>
+                <input class="form-control" type="text" name="admin_name" value="Admin">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">E-mail</label>
+                <input class="form-control" type="email" name="admin_email" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Documento</label>
+                <input class="form-control" type="text" name="customer_document" placeholder="CPF ou CNPJ">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Pagamento</label>
+                <select class="form-select" name="payment_method">
+                    <option value="card">Cartao</option>
+                    <option value="pix">PIX</option>
+                    <option value="boleto">Boleto</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Parcelas</label>
+                <select class="form-select" name="installment_count">
+                    {% for item in range(1, 13) %}
+                    <option value="{{ item }}">{{ item }}x</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary">Criar sessao de checkout</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

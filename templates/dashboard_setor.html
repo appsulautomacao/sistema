@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Setor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+
+<div class="top-header d-flex align-items-center justify-content-between">
+  <div>
+    <strong>{{ company.name }}</strong>
+    <span class="badge bg-info ms-2">Setor {{ current_user.sector.name }}</span>
+  </div>
+  <div id="userInfo"></div>
+  <div class="d-flex align-items-center gap-2" id="whatsappStatus"></div>
+</div>
+
+<div class="central-layout">
+  <aside class="sidebar-left">
+    <div class="conversation-search">
+      <div class="mb-2">
+        <strong>Fila do Setor</strong>
+      </div>
+      <div class="d-flex gap-2 mb-2">
+        <button class="btn btn-sm btn-outline-secondary active" id="filterAll">Todas</button>
+        <button class="btn btn-sm btn-outline-secondary" id="filterQueue">Aguardando</button>
+        <button class="btn btn-sm btn-outline-secondary" id="filterMine">Minhas</button>
+      </div>
+      <input type="text"
+             id="conversationSearch"
+             class="form-control form-control-sm"
+             placeholder="Buscar conversa...">
+    </div>
+
+    <div id="sectorSummary" class="p-2 border-bottom small"></div>
+    <div id="conversationList"></div>
+  </aside>
+
+  <main class="chat-center">
+    <div class="chat-header">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <strong id="chatClient">Selecione uma conversa</strong><br>
+          <small id="chatOwnershipHint" class="text-muted">Assuma uma conversa para iniciar o atendimento.</small>
+        </div>
+
+        <div id="conversationActions" class="d-none d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-primary" id="assignBtn">Assumir</button>
+          <button class="btn btn-sm btn-outline-secondary d-none" id="toggleAllAttachmentsBtn">
+            Selecionar todos
+          </button>
+          <button class="btn btn-sm btn-outline-success d-none" id="downloadSelectedAttachmentsBtn">
+            Baixar selecionados (.zip)
+          </button>
+
+          <select id="sectorSelect" class="form-select form-select-sm w-auto">
+            <option value="">Transferir para setor...</option>
+          </select>
+
+          <span class="action-link" id="markUnread">Marcar como não lida</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <div class="chat-input-area">
+      <label class="media-upload-btn">
+        📎
+        <input type="file" id="mediaInput" hidden multiple>
+      </label>
+
+      <div class="chat-composer">
+        <div class="composer-attachment d-none" id="composerAttachment">
+          <div class="composer-attachment-name" id="composerAttachmentName"></div>
+          <button type="button" class="composer-attachment-remove" id="removeAttachmentBtn">Remover</button>
+        </div>
+
+        <input type="text"
+               id="messageInput"
+               class="chat-text-input"
+               placeholder="Assuma a conversa para responder..."
+               disabled>
+      </div>
+
+      <button id="sendMessageBtn" class="btn btn-success" disabled>
+        Enviar
+      </button>
+    </div>
+  </main>
+
+  <aside class="sidebar-right">
+    <h6>Equipe do Setor</h6>
+    <div id="teamOverview"></div>
+
+    <hr>
+
+    <h6>Histórico</h6>
+    <div id="conversationHistory" class="conversation-history"></div>
+
+    <hr>
+
+    <h6>Métricas</h6>
+    <div id="conversationMetrics"></div>
+  </aside>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const USER_COMPANY_ID = {{ current_user.company_id | tojson }};
+  const USER_ID = {{ current_user.id | tojson }};
+  const USER_SECTOR_ID = {{ current_user.sector_id | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard_setor.js', v='20260413m') }}"></script>
+
+</body>
+</html>

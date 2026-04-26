@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Ops - Gestao de Clientes</h3>
+  <div class="mb-3">
+    <a class="btn btn-outline-primary" href="{{ url_for('ops.simulator') }}">Abrir Simulador de Pagamento</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('ops.billing_events') }}">Ver Billing Events</a>
+  </div>
+
+  <div class="card p-3 mb-4">
+    <h5>Criar Cliente</h5>
+    <form method="POST" action="{{ url_for('ops.create_client') }}" class="row g-2">
+      <div class="col-md-4">
+        <input class="form-control" name="company_name" placeholder="Nome da empresa" required>
+      </div>
+      <div class="col-md-3">
+        <input class="form-control" name="admin_name" placeholder="Nome do admin" value="Admin">
+      </div>
+      <div class="col-md-3">
+        <input class="form-control" name="admin_email" placeholder="Email do admin" required>
+      </div>
+      <div class="col-md-2 d-flex align-items-center">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="send_email" id="send_email">
+          <label class="form-check-label" for="send_email">Enviar e-mail</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary">Criar Cliente</button>
+      </div>
+    </form>
+  </div>
+
+  {% if latest_provision %}
+  <div class="card p-3 mb-4 border-success">
+    <h5 class="text-success">Ultimo Provisionamento</h5>
+    <div><strong>Empresa:</strong> {{ latest_provision.company_name }} (id={{ latest_provision.company_id }})</div>
+    <div><strong>Slug:</strong> {{ latest_provision.slug }}</div>
+    <div><strong>Admin:</strong> {{ latest_provision.admin_name }} &lt;{{ latest_provision.admin_email }}&gt;</div>
+    <div><strong>Senha temporaria:</strong> <code>{{ latest_provision.temporary_password }}</code></div>
+    <div><strong>Link:</strong> <a href="{{ latest_provision.login_url }}" target="_blank">{{ latest_provision.login_url }}</a></div>
+    {% if latest_provision.email_result %}
+      <div><strong>E-mail:</strong> {{ latest_provision.email_result.detail }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="card p-3">
+    <h5>Clientes</h5>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Status</th>
+          <th>Admin URL</th>
+          <th>Usuarios</th>
+          <th>Conversas</th>
+          <th>Mensagens</th>
+          <th>Assinaturas</th>
+          <th>Pagamentos</th>
+          <th>Anexos (bytes)</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in company_rows %}
+        <tr>
+          <td>{{ row.company.name }}</td>
+          <td>
+            {% if row.plan == 'blocked' %}
+            <span class="badge bg-danger">Bloqueado</span>
+            {% else %}
+            <span class="badge bg-success">{{ row.plan|upper }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ request.host_url }}{{ row.company.slug }}/login" target="_blank">
+              {{ row.company.slug }}/login
+            </a>
+          </td>
+          <td>{{ row.users_count }}</td>
+          <td>{{ row.conversations_count }}</td>
+          <td>{{ row.messages_count }}</td>
+          <td>
+            {{ row.subscriptions_count }}
+            {% if row.latest_subscription %}
+            <div><small>{{ row.latest_subscription.plan.code }} / {{ row.latest_subscription.status }}</small></div>
+            {% endif %}
+          </td>
+          <td>{{ row.paid_transactions_count }}</td>
+          <td>{{ row.attachments_bytes }}</td>
+          <td>
+            {% if row.plan == 'blocked' %}
+            <form method="POST" action="{{ url_for('ops.activate_client', company_id=row.company.id) }}" style="display:inline;">
+              <button class="btn btn-sm btn-success">Ativar</button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('ops.block_client', company_id=row.company.id) }}" style="display:inline;">
+              <button class="btn btn-sm btn-warning">Bloquear</button>
+            </form>
+            {% endif %}
+            <form method="POST" action="{{ url_for('ops.reset_admin_password', company_id=row.company.id) }}" style="display:inline;">
+              <button class="btn btn-sm btn-outline-primary">Resetar Admin</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

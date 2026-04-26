@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>Setores da Empresa</h3>
+
+<hr>
+
+<h5>Criar setor</h5>
+
+<form method="POST" action="/admin/sectors/create">
+
+<div class="row">
+
+<div class="col-md-6">
+<input class="form-control"
+name="name"
+placeholder="Nome do setor"
+required>
+</div>
+
+<div class="col-md-3">
+<input class="form-control"
+name="sla_minutes"
+placeholder="SLA (min)"
+type="number"
+min="1">
+</div>
+
+<div class="col-md-3">
+<button class="btn btn-success">
+Criar Setor
+</button>
+</div>
+
+</div>
+
+</form>
+
+<hr>
+
+<h5>Setores cadastrados</h5>
+
+<table class="table table-striped">
+
+<tr>
+<th>Setor</th>
+<th>Tipo</th>
+<th>SLA (min)</th>
+<th>Acoes</th>
+</tr>
+
+{% for sector in sectors %}
+
+<tr>
+
+<td>{{ sector.name }}</td>
+
+<td>
+{% if sector.is_central %}
+<span class="badge bg-primary">Obrigatorio</span>
+{% else %}
+<span class="badge bg-secondary">Comum</span>
+{% endif %}
+</td>
+
+<td>
+{{ sector.sla_minutes if sector.sla_minutes else "-" }}
+</td>
+
+<td>
+{% if sector.is_central %}
+<button class="btn btn-sm btn-secondary" disabled>
+Nao pode excluir
+</button>
+{% else %}
+<a class="btn btn-sm btn-danger"
+href="/admin/sectors/delete/{{ sector.id }}">
+Excluir
+</a>
+{% endif %}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+{% endblock %}

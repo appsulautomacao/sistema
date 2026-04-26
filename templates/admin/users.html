@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>Usuarios da Empresa</h3>
+
+<hr>
+
+<h5>Criar usuario</h5>
+<div class="mb-3">
+    <a href="/admin/sectors" class="btn btn-outline-primary">
+        + Criar / Gerenciar Setores
+    </a>
+</div>
+
+<form method="POST" action="/admin/users/create">
+
+<div class="row">
+
+<div class="col-md-3">
+<input class="form-control" name="name" placeholder="Nome" required>
+</div>
+
+<div class="col-md-3">
+<input class="form-control" name="email" placeholder="Email" required>
+</div>
+
+<div class="col-md-2">
+<input class="form-control" name="password" placeholder="Senha" required>
+</div>
+
+<div class="col-md-2">
+<select class="form-control" name="role">
+<option value="AGENT">AGENT</option>
+<option value="ADMIN">ADMIN</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<select class="form-control" name="sector_id" required>
+{% if not sectors %}
+<option value="">Add setor primeiro</option>
+{% else %}
+<option value="">Selecione o setor</option>
+{% for sector in sectors %}
+<option value="{{ sector.id }}">{{ sector.name }}</option>
+{% endfor %}
+{% endif %}
+</select>
+</div>
+
+</div>
+
+<br>
+
+<button class="btn btn-success" {% if not sectors %}disabled{% endif %}>
+Criar Usuario
+</button>
+
+{% if not sectors %}
+<div class="form-text mt-2">
+Nenhum setor cadastrado. Clique em <a href="/admin/sectors">Add setor</a> para continuar.
+</div>
+{% endif %}
+
+</form>
+
+<hr>
+
+<h5>Usuarios cadastrados</h5>
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Nome</th>
+<th>Email</th>
+<th>Role</th>
+<th>Setor</th>
+<th>Status</th>
+<th>Acoes</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for user in users %}
+
+<tr>
+
+<td>{{ user.name }}</td>
+<td>{{ user.email }}</td>
+<td>{{ user.role }}</td>
+<td>{{ user.sector.name if user.sector else "-" }}</td>
+
+<td>
+
+{% if user.is_blocked %}
+<span class="badge bg-danger">Bloqueado</span>
+{% else %}
+<span class="badge bg-success">Ativo</span>
+{% endif %}
+
+</td>
+
+<td>
+
+<form method="POST"
+action="/admin/users/toggle/{{ user.id }}"
+style="display:inline;">
+
+{% if user.is_blocked %}
+
+<button class="btn btn-sm btn-success">
+Desbloquear
+</button>
+
+{% else %}
+
+<button class="btn btn-sm btn-warning">
+Bloquear
+</button>
+
+{% endif %}
+
+</form>
+
+<a class="btn btn-sm btn-danger"
+href="/admin/users/delete/{{ user.id }}">
+Excluir
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

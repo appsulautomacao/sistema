@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>Configuracoes da Empresa</h3>
+
+<form method="POST" enctype="multipart/form-data">
+
+<h5 class="mt-3">Identidade e Acesso</h5>
+
+<div class="mb-3">
+<label>Nome da empresa</label>
+<input type="text" class="form-control"
+name="company_name"
+value="{{ company.name or '' }}"
+required>
+</div>
+
+<div class="mb-3">
+<label>Slug da empresa (URL)</label>
+<input type="text" class="form-control"
+name="company_slug"
+value="{{ company.slug or '' }}"
+placeholder="nome-da-empresa">
+<div class="form-text">
+Link de acesso dos atendentes: <code>{{ request.host_url }}{{ company.slug or 'slug' }}/login</code>
+</div>
+</div>
+
+<div class="mb-3">
+<label>Logo URL</label>
+<input type="url" class="form-control"
+name="logo_url"
+value="{{ company.logo_url or '' }}"
+placeholder="https://site.com/logo.png">
+</div>
+
+<div class="mb-3">
+<label>Upload da logo</label>
+<input type="file" class="form-control"
+name="company_logo"
+accept=".png,.jpg,.jpeg,.webp,.svg">
+<div class="form-text">
+Se enviar arquivo, ele substitui a URL da logo automaticamente.
+</div>
+</div>
+
+<div class="mb-3">
+<label>Cor principal</label>
+<input type="text" class="form-control"
+name="primary_color"
+value="{{ company.primary_color or '#0D6EFD' }}"
+placeholder="#0D6EFD">
+</div>
+
+<div class="mb-3">
+<label>Documento</label>
+<input type="text" class="form-control"
+name="document"
+value="{{ company.document or '' }}">
+</div>
+
+<hr class="my-4">
+
+<div class="mb-3">
+<label>SLA padrao (minutos)</label>
+<input type="number" class="form-control"
+name="sla_minutes"
+value="{{ settings.sla_minutes }}">
+</div>
+
+<div class="mb-3">
+<label>Horario comercial inicio</label>
+<input type="time" class="form-control"
+name="business_hours_start"
+value="{{ settings.business_hours_start }}">
+</div>
+
+<div class="mb-3">
+<label>Horario comercial fim</label>
+<input type="time" class="form-control"
+name="business_hours_end"
+value="{{ settings.business_hours_end }}">
+</div>
+
+<div class="mb-3">
+<label>Alerta antes do SLA (minutos)</label>
+<input type="number" class="form-control"
+name="sla_alert_minutes"
+value="{{ settings.sla_alert_minutes }}">
+</div>
+
+<div class="form-check mb-3">
+<input class="form-check-input"
+type="checkbox"
+name="auto_assign"
+{% if settings.auto_assign %}checked{% endif %}>
+<label class="form-check-label">
+Distribuicao automatica de atendimentos
+</label>
+</div>
+
+<hr class="my-4">
+
+<h5>Inteligencia Artificial</h5>
+
+<div class="form-check mb-3">
+<input class="form-check-input"
+type="checkbox"
+name="central_ai_enabled"
+{% if settings.central_ai_enabled %}checked{% endif %}>
+<label class="form-check-label">
+Ativar triagem automatica por IA na central
+</label>
+</div>
+
+<div class="mb-3">
+<label>Modelo da IA para classificacao</label>
+<input type="text" class="form-control"
+name="ai_classifier_model"
+value="{{ settings.ai_classifier_model or 'gpt-4o-mini' }}"
+placeholder="gpt-4o-mini">
+<div class="form-text">
+Use o nome do modelo que a empresa deve usar na triagem.
+</div>
+</div>
+
+<div class="mb-3">
+<label>Prompt de classificacao da IA</label>
+<textarea class="form-control"
+name="ai_classifier_prompt"
+rows="6"
+placeholder="Opcional. Se vazio, o sistema usa o prompt padrao da plataforma.">{{ settings.ai_classifier_prompt or '' }}</textarea>
+<div class="form-text">
+Essa instrucao vira o contexto principal da IA para classificar mensagens nos setores cadastrados.
+</div>
+</div>
+
+<div class="mb-3">
+<label>Modelo do assistente virtual</label>
+<input type="text" class="form-control"
+name="ai_assistant_model"
+value="{{ settings.ai_assistant_model or 'gpt-4o-mini' }}"
+placeholder="gpt-4o-mini">
+<div class="form-text">
+Modelo usado para gerar respostas naturais de pre-atendimento.
+</div>
+</div>
+
+<div class="mb-3">
+<label>Prompt do assistente virtual</label>
+<textarea class="form-control"
+name="ai_assistant_prompt"
+rows="7"
+placeholder="Opcional. Se vazio, o sistema usa o prompt padrao do assistente.">{{ settings.ai_assistant_prompt or '' }}</textarea>
+<div class="form-text">
+Aqui voce define o comportamento, tom de voz e limites do assistente virtual da empresa.
+</div>
+</div>
+
+<div class="mb-3">
+<label>Arquivo base para RAG da empresa</label>
+<input type="text" class="form-control"
+name="rag_document_path"
+value="{{ company.rag_document_path or '' }}"
+placeholder="files_rag/rag_blucopy.txt">
+<div class="form-text">
+Informe o caminho do arquivo com precos, horarios, FAQ e regras da empresa. Exemplo: <code>files_rag/rag_blucopy.txt</code>.
+</div>
+</div>
+
+<div class="mb-3">
+<label>Plano</label>
+<select class="form-control" name="plan">
+<option value="trial" {% if settings.plan=='trial' %}selected{% endif %}>Trial</option>
+<option value="active" {% if settings.plan=='active' %}selected{% endif %}>Ativo</option>
+<option value="blocked" {% if settings.plan=='blocked' %}selected{% endif %}>Bloqueado</option>
+</select>
+</div>
+
+<button class="btn btn-primary">
+Salvar Configuracoes
+</button>
+
+</form>
+
+<hr class="my-4">
+
+<h5>Upload do Arquivo RAG</h5>
+
+<form method="POST" action="/admin/rag/upload" enctype="multipart/form-data">
+<div class="mb-3">
+<label>Enviar arquivo de conhecimento</label>
+<input type="file" class="form-control" name="rag_file" accept=".txt,.md,.csv" required>
+<div class="form-text">
+Versao inicial suportando arquivos <code>.txt</code>, <code>.md</code> e <code>.csv</code>. O upload ja vincula automaticamente o arquivo a empresa.
+</div>
+</div>
+
+<button class="btn btn-outline-primary">
+Enviar Arquivo RAG
+</button>
+</form>
+
+</div>
+
+{% endblock %}

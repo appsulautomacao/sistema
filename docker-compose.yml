@@ -1,0 +1,78 @@
+services:
+
+  app:
+    build: .
+    container_name: whatsapp_atendimento_app
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    volumes:
+      - app_uploads:/app/uploads
+      - app_storage:/app/storage
+      - app_files_rag:/app/files_rag
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  db:
+    image: postgres:15
+    container_name: postgres_app
+    environment:
+      POSTGRES_DB: ${POSTGRES_APP_DB:-whatsapp_atendimento}
+      POSTGRES_USER: ${POSTGRES_APP_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_APP_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5  
+    volumes:
+      - pgdata_app:/var/lib/postgresql/data
+    restart: always
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_evolution
+    environment:
+      POSTGRES_DB: ${POSTGRES_EVOLUTION_DB:-evolution_db}
+      POSTGRES_USER: ${POSTGRES_EVOLUTION_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_EVOLUTION_PASSWORD:-postgres}
+    volumes:
+      - pgdata_evolution:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7
+    container_name: evolution_redis
+    restart: always
+
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: evolution
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - SERVER_TYPE=${EVOLUTION_SERVER_TYPE:-http}
+      - SERVER_PORT=${EVOLUTION_SERVER_PORT:-8080}
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${POSTGRES_EVOLUTION_USER:-postgres}:${POSTGRES_EVOLUTION_PASSWORD:-postgres}@postgres_evolution:5432/${POSTGRES_EVOLUTION_DB:-evolution_db}
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://evolution_redis:6379/6
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_SAVE_INSTANCES=false
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1035709447 
+    restart: always
+
+volumes:
+  pgdata_app:
+  pgdata_evolution:
+  app_uploads:
+  app_storage:
+  app_files_rag:

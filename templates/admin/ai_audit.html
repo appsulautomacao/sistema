@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-1">Auditoria da IA</h3>
+    <div class="text-muted">Acompanhe as decisões de triagem automática por empresa.</div>
+  </div>
+  <a class="btn btn-outline-secondary" href="/admin/settings">Configurar IA</a>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm p-3 text-center">
+      <h6 class="text-muted mb-2">Total de decisões</h6>
+      <h4 class="mb-0">{{ summary.total_logs }}</h4>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm p-3 text-center">
+      <h6 class="text-muted mb-2">Com provedor de IA</h6>
+      <h4 class="mb-0">{{ summary.provider_logs }}</h4>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm p-3 text-center">
+      <h6 class="text-muted mb-2">Com fallback</h6>
+      <h4 class="mb-0">{{ summary.fallback_logs }}</h4>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5 class="mb-3">Filtros</h5>
+  <form method="GET" class="row g-2">
+    <div class="col-md-4">
+      <input type="text" class="form-control" name="q" value="{{ filters.q }}" placeholder="Buscar no texto de entrada">
+    </div>
+    <div class="col-md-3">
+      <select class="form-control" name="sector">
+        <option value="">Todos os setores</option>
+        {% for sector in sector_options %}
+          <option value="{{ sector }}" {% if filters.sector == sector %}selected{% endif %}>{{ sector }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-control" name="provider">
+        <option value="">Todos os provedores</option>
+        {% for provider in provider_options %}
+          <option value="{{ provider }}" {% if filters.provider == provider %}selected{% endif %}>{{ provider }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-control" name="fallback">
+        <option value="">Fallback ou IA</option>
+        <option value="yes" {% if filters.fallback == 'yes' %}selected{% endif %}>Somente fallback</option>
+        <option value="no" {% if filters.fallback == 'no' %}selected{% endif %}>Somente IA</option>
+      </select>
+    </div>
+    <div class="col-md-1 d-grid">
+      <button class="btn btn-primary">Filtrar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card shadow-sm p-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Últimas decisões</h5>
+    <small class="text-muted">Mostrando até 200 registros</small>
+  </div>
+
+  {% if logs %}
+    <div class="ai-audit-list">
+      {% for log in logs %}
+        <div class="ai-audit-item">
+          <div class="ai-audit-head">
+            <div class="ai-audit-meta">
+              <span class="ai-pill">Conversa #{{ log.conversation_id }}</span>
+              <span class="ai-pill ai-pill-primary">{{ log.predicted_sector or 'Sem setor' }}</span>
+              {% if log.used_fallback %}
+                <span class="ai-pill ai-pill-warn">Fallback</span>
+              {% else %}
+                <span class="ai-pill ai-pill-success">{{ log.provider or 'IA' }}</span>
+              {% endif %}
+            </div>
+            <small class="text-muted">{{ log.created_at.strftime("%d/%m/%Y %H:%M") if log.created_at else '-' }}</small>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="ai-audit-block">
+                <strong>Entrada</strong>
+                <div class="ai-audit-text">{{ log.input_text or '-' }}</div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="ai-audit-block">
+                <strong>Saída técnica</strong>
+                <div class="small text-muted mb-2">
+                  modelo: {{ log.model_name or '-' }}
+                  {% if log.failure_reason %}
+                    | motivo: {{ log.failure_reason }}
+                  {% endif %}
+                </div>
+                <div class="ai-audit-text">{{ log.raw_output or 'Sem saída bruta registrada.' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">Nenhum log de IA encontrado com os filtros atuais.</div>
+  {% endif %}
+</div>
+
+{% endblock %}

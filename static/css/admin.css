@@ -1,0 +1,153 @@
+.empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+    font-style: italic;
+}
+
+.result-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.result-item:hover {
+    background: #f5f5f5;
+}
+
+
+.conversation-item {
+  border-bottom: 1px solid #eee;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.conversation-item:hover {
+  background: #f5f5f5;
+}
+
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #777;
+  font-style: italic;
+}
+
+
+.sector-box {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.sector-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.user-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-name {
+  font-size: 14px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.online {
+  background: #28a745;
+}
+
+.status-dot.offline {
+  background: #dc3545;
+}
+
+.user-status {
+  font-size: 12px;
+  color: #666;
+}
+
+.ai-audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-audit-item {
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.ai-audit-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ai-audit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef1f5;
+  color: #4f5d73;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-pill-primary {
+  background: #e7f0ff;
+  color: #0d6efd;
+}
+
+.ai-pill-success {
+  background: #eaf7ef;
+  color: #198754;
+}
+
+.ai-pill-warn {
+  background: #fff4e5;
+  color: #b26a00;
+}
+
+.ai-audit-block {
+  background: #f8f9fb;
+  border-radius: 10px;
+  padding: 12px;
+  height: 100%;
+}
+
+.ai-audit-text {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.45;
+}

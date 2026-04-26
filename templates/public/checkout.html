@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <span class="badge text-bg-secondary mb-3">{{ session.status|upper }}</span>
+                <h2 class="mb-3">Sessao de checkout criada</h2>
+                <p class="text-muted">
+                    Esta sessao registra a intencao comercial do cliente. O gateway deve enviar o webhook com
+                    os metadados abaixo para que a empresa seja provisionada com o plano correto.
+                </p>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <strong>Plano</strong>
+                            <div>{{ plan.name }}</div>
+                            <div class="text-muted small">{{ plan.description }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <strong>Valor</strong>
+                            <div>{{ plan.price_display }}</div>
+                            <div class="text-muted small">{{ plan.billing_period }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <strong>Empresa</strong>
+                            <div>{{ session.company_name }}</div>
+                            <div class="text-muted small">{{ session.admin_email }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <strong>Pagamento</strong>
+                            <div>{{ session.payment_method }}</div>
+                            <div class="text-muted small">{{ session.installment_count }}x</div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <h5>Metadados obrigatorios para o gateway</h5>
+                <pre class="bg-light border rounded p-3 small mb-0">{{ checkout_payload | tojson(indent=2) }}</pre>
+
+                <div class="mt-4 d-flex gap-2">
+                    {% if pay_url %}
+                    <a class="btn btn-primary" href="{{ pay_url }}">Abrir checkout PagBank</a>
+                    {% elif pagbank_configured %}
+                    <form method="POST" action="{{ url_for('commercial.redirect_to_provider_checkout', public_token=session.public_token) }}">
+                        <button class="btn btn-primary">Gerar checkout PagBank</button>
+                    </form>
+                    {% else %}
+                    <button class="btn btn-secondary" disabled>Configure PAGBANK_API_TOKEN para gerar o checkout real</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Fluxo operacional</h5>
+                <ol class="mb-0">
+                    <li>Cliente escolhe o plano e cria a sessao.</li>
+                    <li>Gateway recebe o pagamento com estes metadados.</li>
+                    <li>Webhook aprovado chega em <code>/webhooks/pagseguro</code>.</li>
+                    <li>Billing cria empresa, assinatura e transacao.</li>
+                    <li>Ops acompanha tudo em <code>/ops/billing-events</code>.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

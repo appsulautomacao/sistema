@@ -1,0 +1,14 @@
+flask==2.3.3
+flask-sqlalchemy==3.0.5
+flask-migrate
+flask-socketio
+psycopg2-binary
+python-dotenv
+eventlet
+openai
+Flask-Login
+Flask-Migrate
+requests
+asyncpg
+psycopg2-binary
+

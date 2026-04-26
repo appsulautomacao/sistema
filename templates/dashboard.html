@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Central de Atendimento</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body
+  class="central-dashboard"
+  data-company-id="{{ current_user.company_id }}"
+  data-ai-enabled="{% if company and company.settings and company.settings.central_ai_enabled %}true{% else %}false{% endif %}">
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="document.body.classList.remove('sidebar-open')"></div>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">{{ (company.name[:1] if company and company.name else 'A')|upper }}</div>
+      <div>
+        <h1>{{ company.name if company else 'Appsul Central' }}</h1>
+        <p>Atendimento inteligente</p>
+      </div>
+    </div>
+
+    <nav class="menu">
+      <a href="#" class="active">
+        Central de conversas
+        <span class="tag" id="sidebarConversationCount">0</span>
+      </a>
+      <a href="#">
+        Painel operacional
+        <span class="tag">Hoje</span>
+      </a>
+      <a href="#">
+        Setores
+        <span class="tag" id="sidebarSectorCount">{{ sectors|length if sectors is defined else 0 }}</span>
+      </a>
+      <a href="#">
+        Equipe
+        <span class="tag">{{ company.users|length if company and company.users is defined else 0 }}</span>
+      </a>
+      <a href="#">
+        Relatórios
+        <span class="tag">Novo</span>
+      </a>
+      <a href="#">Configurações</a>
+      {% if current_user.is_authenticated and current_user.role == "ADMIN" %}
+      <a href="/admin">
+        Administrativo
+        <span class="tag">Admin</span>
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <strong>Resumo rápido</strong>
+      <div id="iaStatusHint" style="margin-top:8px;">
+        {% if company and company.settings and company.settings.central_ai_enabled %}
+        A IA ajuda a triar e orientar o atendimento da central.
+        {% else %}
+        A central está operando apenas com atendimento humano.
+        {% endif %}
+      </div>
+      <div id="iaLabel" style="margin-top:8px; font-weight:600;">
+        {% if company and company.settings and company.settings.central_ai_enabled %}IA: Ligada{% else %}IA: Humana{% endif %}
+      </div>
+      <div class="sidebar-user-info" id="userInfo" style="margin-top:12px;"></div>
+    </div>
+  </aside>
+
+  <main class="page">
+    <div class="topbar">
+      <div class="title-wrap">
+        <button class="button-icon" id="sidebarToggleBtn" type="button" onclick="document.body.classList.add('sidebar-open')">☰</button>
+        <div class="company-logo" id="topbarLogo">
+          {{ (company.name[:1] if company and company.name else 'A')|upper }}
+        </div>
+        <div class="title-copy">
+          <h2>Central de Atendimento</h2>
+          <p>Visão profissional da operação com distribuição clara e foco em SLA.</p>
+        </div>
+      </div>
+
+      <div class="search-panel-wrap">
+          <input
+            type="text"
+            id="conversationSearch"
+            class="search search-panel"
+            placeholder="Buscar por cliente, número, protocolo ou atendente"
+          >
+      </div>
+
+      <div class="topbar-actions">
+        <div class="header-meta">
+          <div class="header-user" id="headerUserMeta">
+            <strong id="headerUserName">{{ current_user.name if current_user.is_authenticated else 'Usuário' }}</strong>
+            <span id="headerUserRole">{{ current_user.role if current_user.is_authenticated else 'Atendente' }}</span>
+          </div>
+          <span class="status-pill" id="whatsappStatusTop">
+            <span class="status-dot"></span>
+            <span>WhatsApp logado</span>
+          </span>
+          <a href="/logout" class="button soft logout-button">Logout</a>
+        </div>
+        <div class="ai-wrapper">
+          <button class="button ai-toggle {% if not (company and company.settings and company.settings.central_ai_enabled) %}off{% endif %}" id="iaToggleBtn" type="button">
+            {% if company and company.settings and company.settings.central_ai_enabled %}IA: Ligada{% else %}IA: Desligada{% endif %}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <section class="workspace">
+      <section class="card left-panel">
+        <div class="panel-header">
+          <div>
+            <h3>Fila da central</h3>
+            <p>Conversas abertas e prontas para tratamento pela operacao.</p>
+          </div>
+          <span class="pill-count" id="conversationCount">0 ativas</span>
+        </div>
+
+        <div class="filters" id="conversationFilters">
+          <button type="button" class="chip filter-chip active" data-filter="all">Todas</button>
+          <button type="button" class="chip filter-chip" data-filter="unread">Não lidas</button>
+          <button type="button" class="chip filter-chip" data-filter="mine">Meu setor</button>
+          <button type="button" class="chip filter-chip" data-filter="sla">SLA em risco</button>
+          <button type="button" class="chip filter-chip" data-filter="assigned">Assumidas</button>
+        </div>
+
+        <div class="conversation-list" id="conversationList"></div>
+      </section>
+
+      <section class="card conversation-main">
+        <div class="conversation-head">
+          <button class="mobile-back" id="mobileBackBtn" type="button" onclick="document.body.classList.remove('mobile-chat-open')">← Voltar para conversas</button>
+
+          <div class="conversation-head-top">
+            <div class="profile">
+              <div class="avatar" id="chatClientAvatar">?</div>
+              <div>
+                <h3 id="chatClient">Selecione uma conversa</h3>
+                <p id="chatClientSubline">Telefone não disponível • Conversa</p>
+              </div>
+            </div>
+
+            <div class="head-actions d-none" id="conversationActions">
+              <button class="button soft" id="assignBtn" type="button">Assumir</button>
+              <select id="sectorSelect" class="action-select">
+                <option value="">Enviar para setor...</option>
+              </select>
+              <button class="button soft" id="assistantSuggestBtn" type="button">Sugestão IA</button>
+              <button class="button soft d-none" id="toggleAllAttachmentsBtn" type="button">Selecionar todos</button>
+              <button class="button soft d-none" id="downloadSelectedAttachmentsBtn" type="button">Baixar selecionados (.zip)</button>
+              <button class="button soft" id="markUnread" type="button">Marcar como não lida</button>
+              <button class="button primary" id="detailToggleBtn" type="button">Detalhe</button>
+            </div>
+          </div>
+
+          <div class="conversation-details-panel d-none" id="conversationDetailsPanel">
+          <div class="conversation-badges">
+            <span class="badge danger" id="chatSlaBadge">Sem status</span>
+            <span class="badge primary" id="chatSectorBadge">Setor: Central</span>
+            <span class="badge gray" id="chatAssignedBadge">Responsável: Não assumida</span>
+          </div>
+
+          <div class="conversation-info">
+            <div class="mini-info">
+              <span>Canal</span>
+              <strong id="conversationInfoChannel">WhatsApp</strong>
+            </div>
+            <div class="mini-info">
+              <span>Tempo em fila</span>
+              <strong id="conversationInfoQueue">-</strong>
+            </div>
+            <div class="mini-info">
+              <span>Última interação</span>
+              <strong id="conversationInfoLastInteraction">-</strong>
+            </div>
+            <div class="mini-info">
+              <span>Prioridade</span>
+              <strong id="conversationInfoPriority">-</strong>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        <div class="assistant-suggestion-panel d-none" id="assistantSuggestionPanel">
+          <div class="assistant-suggestion-head">
+            <div>
+              <strong>Sugestão do Assistente</strong>
+              <div class="assistant-suggestion-meta" id="assistantSuggestionMeta">Use a IA para montar uma pré-resposta com base no histórico e no RAG.</div>
+            </div>
+            <div class="assistant-suggestion-actions">
+              <button class="button soft" id="assistantRefreshBtn" type="button">Gerar novamente</button>
+              <button class="button primary" id="assistantUseBtn" type="button" disabled>Usar no campo</button>
+            </div>
+          </div>
+          <div class="assistant-suggestion-body" id="assistantSuggestionBody"></div>
+        </div>
+
+        <div class="messages" id="chatMessages"></div>
+
+        <div class="composer">
+          <div class="composer-box">
+            <div class="composer-input-wrap">
+              <label class="composer-attach-btn media-upload-btn" id="attachShortcutBtn" title="Anexar arquivos">
+                📎
+                <input type="file" id="mediaInput" hidden multiple>
+              </label>
+
+              <div class="composer-text-stack chat-composer">
+                <div class="composer-attachment d-none" id="composerAttachment">
+                  <div class="composer-attachment-name" id="composerAttachmentName"></div>
+                  <button type="button" class="composer-attachment-remove" id="removeAttachmentBtn">Remover</button>
+                </div>
+
+                <textarea
+                  id="messageInput"
+                  class="chat-text-input"
+                  placeholder="Digite uma resposta profissional e objetiva..."
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="send-actions">
+              <button class="button primary" id="sendMessageBtn" type="button">Enviar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="sector-column">
+        <div class="card sector-card">
+          <h4>Setores</h4>
+          <div id="sectorList"></div>
+        </div>
+
+        <div class="card sector-card">
+          <h4>Histórico</h4>
+          <div id="conversationHistory" class="conversation-history"></div>
+        </div>
+
+        <div class="card sector-card">
+          <h4>Métricas</h4>
+          <div id="conversationMetrics"></div>
+        </div>
+
+        <div class="card sector-card">
+          <h4>Status do WhatsApp</h4>
+          <div id="whatsappStatus"></div>
+        </div>
+      </aside>
+
+
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    window.USER_COMPANY_ID = {{ current_user.company_id | tojson }};
+  </script>
+  <script>
+    window.addEventListener("error", function (event) {
+      const list = document.getElementById("conversationList");
+      if (!list) return;
+      list.innerHTML = `<div class="sector-item">Erro JS: ${event.message}</div>`;
+    });
+
+    window.addEventListener("unhandledrejection", function (event) {
+      const list = document.getElementById("conversationList");
+      if (!list) return;
+      const reason = event.reason && event.reason.message
+        ? event.reason.message
+        : String(event.reason || "Falha inesperada");
+      list.innerHTML = `<div class="sector-item">Erro JS: ${reason}</div>`;
+    });
+  </script>
+  <script src="{{ url_for('static', filename='js/dashboard.js', v='20260420a') }}"></script>
+  <script>
+    let fallbackConversationCache = [];
+    let fallbackCurrentConversationId = null;
+    let fallbackSectorsCache = [];
+    let fallbackIsBindingActions = false;
+    let fallbackRefreshTimer = null;
+    let fallbackIaEnabled = document.body && document.body.dataset
+      ? document.body.dataset.aiEnabled === "true"
+      : false;
+
+    function fallbackGetInitials(name) {
+      return String(name || "?")
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(function (part) { return part.charAt(0).toUpperCase(); })
+        .join("") || "?";
+    }
+
+    function fallbackGetStatusMeta(item) {
+      if (!item) {
+        return { label: "Sem status", tone: "gray" };
+      }
+      if (item.sla_breached) {
+        return { label: "SLA critico", tone: "danger" };
+      }
+      if (!item.is_read) {
+        return { label: "Nao lida", tone: "warning" };
+      }
+      if (item.assigned_to) {
+        return { label: "Em atendimento", tone: "success" };
+      }
+      return { label: "Na fila", tone: "gray" };
+    }
+
+    function fallbackFormatDurationFromDate(startDate) {
+      if (!startDate) return "-";
+      const start = new Date(startDate);
+      const diffMinutes = Math.max(0, Math.round((Date.now() - start.getTime()) / 60000));
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      if (hours > 0) {
+        return hours + "h " + String(minutes).padStart(2, "0") + "min";
+      }
+      return minutes + " min";
+    }
+
+    function fallbackFormatRelativeTime(dateString) {
+      if (!dateString) return "-";
+      const date = new Date(dateString);
+      const diffMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+      if (diffMinutes < 1) return "agora";
+      if (diffMinutes < 60) return "ha " + diffMinutes + " min";
+      const diffHours = Math.round(diffMinutes / 60);
+      if (diffHours < 24) return "ha " + diffHours + " h";
+      return date.toLocaleDateString("pt-BR");
+    }
+
+    function fallbackEscapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function fallbackGetMessageDownloadUrl(message) {
+      const attachment = Array.isArray(message.attachments) && message.attachments.length
+        ? message.attachments[0]
+        : null;
+
+      if (attachment && attachment.download_url) {
+        return attachment.download_url;
+      }
+      if (message.media_url && /^https?:/i.test(message.media_url)) {
+        return message.media_url;
+      }
+      return "/media/message/" + message.id;
+    }
+
+    function fallbackGetMessageDisplayName(message, fallback) {
+      const attachment = Array.isArray(message.attachments) && message.attachments.length
+        ? message.attachments[0]
+        : null;
+
+      return (attachment && (attachment.original_filename || attachment.safe_filename))
+        || message.content
+        || fallback
+        || "Arquivo";
+    }
+
+    function fallbackCanReplyToCurrentConversation() {
+      const item = fallbackConversationCache.find(function (entry) {
+        return String(entry.id) === String(fallbackCurrentConversationId);
+      });
+      return !!(item && item.is_mine);
+    }
+
+    function fallbackUpdateReplyState() {
+      const sendButton = document.getElementById("sendMessageBtn");
+      const messageInput = document.getElementById("messageInput");
+      const canReply = fallbackCanReplyToCurrentConversation();
+      const hasConversation = !!fallbackCurrentConversationId;
+
+      if (sendButton) {
+        sendButton.disabled = !hasConversation || !canReply;
+      }
+
+      if (messageInput) {
+        messageInput.disabled = !hasConversation || !canReply;
+        if (!hasConversation) {
+          messageInput.placeholder = "Digite uma resposta profissional e objetiva...";
+        } else if (!canReply) {
+          messageInput.placeholder = "Assuma a conversa para responder ao cliente...";
+        } else {
+          messageInput.placeholder = "Digite uma resposta profissional e objetiva...";
+        }
+      }
+    }
+
+    function fallbackGetConversationPreview(item) {
+      const lastMessage = String(item.last_message || "").trim();
+      if (lastMessage) {
+        return lastMessage;
+      }
+
+      switch (item.last_message_type) {
+        case "image":
+          return "Imagem recebida";
+        case "audio":
+          return "Audio recebido";
+        case "video":
+          return "Video recebido";
+        case "document":
+          return "Documento recebido";
+        default:
+          return "Sem mensagens ainda";
+      }
+    }
+
+    function fallbackRenderMessageBody(message) {
+      const content = fallbackEscapeHtml(message.content || "");
+      const type = message.type || message.message_type || "text";
+
+      if (type === "image") {
+        const imageSrc = fallbackGetMessageDownloadUrl(message);
+        return '' +
+          (content ? '<div class="message-caption">' + content + '</div>' : "") +
+          '<div class="media-wrapper">' +
+            '<img src="' + imageSrc + '" class="chat-image" alt="Imagem enviada">' +
+            '<a href="' + imageSrc + '" class="download-btn" target="_blank" rel="noopener noreferrer">Baixar imagem</a>' +
+          '</div>';
+      }
+
+      if (type === "audio") {
+        const audioSrc = fallbackGetMessageDownloadUrl(message);
+        return '' +
+          (content ? '<div class="message-caption">' + content + '</div>' : "") +
+          '<div class="media-wrapper">' +
+            '<audio controls src="' + audioSrc + '"></audio>' +
+            '<a href="' + audioSrc + '" class="download-btn" target="_blank" rel="noopener noreferrer">Baixar audio</a>' +
+          '</div>';
+      }
+
+      if (type === "video") {
+        const videoSrc = fallbackGetMessageDownloadUrl(message);
+        return '' +
+          (content ? '<div class="message-caption">' + content + '</div>' : "") +
+          '<div class="media-wrapper">' +
+            '<video controls class="chat-video" src="' + videoSrc + '"></video>' +
+            '<a href="' + videoSrc + '" class="download-btn" target="_blank" rel="noopener noreferrer">Baixar video</a>' +
+          '</div>';
+      }
+
+      if (type === "document") {
+        const documentSrc = fallbackGetMessageDownloadUrl(message);
+        const documentName = fallbackEscapeHtml(fallbackGetMessageDisplayName(message, "Documento"));
+        return '' +
+          '<div class="doc-bubble">' +
+            '<strong>Documento recebido</strong>' +
+            '<div>' + documentName + '</div>' +
+            '<a href="' + documentSrc + '" class="download-btn" target="_blank" rel="noopener noreferrer">Abrir documento</a>' +
+          '</div>';
+      }
+
+      return '<div class="message-text">' + content + '</div>';
+    }
+
+    function fallbackResetConversationPanel() {
+      const chatMessages = document.getElementById("chatMessages");
+      const chatClient = document.getElementById("chatClient");
+      const chatClientAvatar = document.getElementById("chatClientAvatar");
+      const chatClientSubline = document.getElementById("chatClientSubline");
+      const conversationActions = document.getElementById("conversationActions");
+
+      fallbackCurrentConversationId = null;
+
+      document.querySelectorAll("#conversationList .conversation-item.active").forEach(function (item) {
+        item.classList.remove("active");
+      });
+
+      if (chatMessages) chatMessages.innerHTML = "";
+      if (chatClient) chatClient.textContent = "Selecione uma conversa";
+      if (chatClientAvatar) chatClientAvatar.textContent = "?";
+      if (chatClientSubline) chatClientSubline.textContent = "Telefone nao disponivel • Conversa";
+      if (conversationActions) conversationActions.classList.add("d-none");
+      fallbackUpdateReplyState();
+    }
+
+    function fallbackRefreshCurrentConversation() {
+      if (!fallbackCurrentConversationId) return Promise.resolve();
+      return fallbackOpenConversation(fallbackCurrentConversationId, { silentRead: true });
+    }
+
+    function fallbackGetActiveConversationId() {
+      if (typeof currentConversationId !== "undefined" && currentConversationId) {
+        return currentConversationId;
+      }
+      if (fallbackCurrentConversationId) {
+        return fallbackCurrentConversationId;
+      }
+      return null;
+    }
+
+    function fallbackRenderAssistantSuggestion(result) {
+      const panel = document.getElementById("assistantSuggestionPanel");
+      const body = document.getElementById("assistantSuggestionBody");
+      const meta = document.getElementById("assistantSuggestionMeta");
+      const useBtn = document.getElementById("assistantUseBtn");
+
+      if (!panel || !body || !meta || !useBtn) return;
+
+      panel.classList.remove("d-none");
+      body.textContent = (result && result.reply) || "A IA nao conseguiu gerar uma sugestao para esta conversa.";
+      const ragCount = result && result.rag_result && Array.isArray(result.rag_result.results)
+        ? result.rag_result.results.length
+        : 0;
+      meta.textContent = "provedor: " + ((result && result.provider) || "fallback")
+        + " | modelo: " + ((result && result.model) || "-")
+        + " | contexto RAG: " + ragCount + " trecho(s)"
+        + ((result && result.reason) ? " | motivo: " + result.reason : "");
+      useBtn.disabled = !(result && result.reply);
+    }
+
+    function fallbackLoadAssistantSuggestion() {
+      const conversationId = fallbackGetActiveConversationId();
+      if (!conversationId) return;
+
+      const panel = document.getElementById("assistantSuggestionPanel");
+      const body = document.getElementById("assistantSuggestionBody");
+      const meta = document.getElementById("assistantSuggestionMeta");
+      if (!panel || !body || !meta) return;
+
+      panel.classList.remove("d-none");
+      body.textContent = "Gerando sugestao da IA...";
+      meta.textContent = "Consultando historico da conversa e RAG da empresa.";
+
+      fetch("/api/conversations/" + conversationId + "/assistant-suggestion", { credentials: "same-origin" })
+        .then(async function (response) {
+          const data = await response.json().catch(function () { return {}; });
+          if (!response.ok) {
+            throw new Error(data.error || "Nao foi possivel gerar a sugestao da IA.");
+          }
+          return data;
+        })
+        .then(function (result) {
+          fallbackRenderAssistantSuggestion(result);
+        })
+        .catch(function (error) {
+          panel.classList.remove("d-none");
+          body.textContent = error.message;
+          meta.textContent = "Falha ao gerar a sugestao.";
+        });
+    }
+
+    function fallbackUseAssistantSuggestion() {
+      const body = document.getElementById("assistantSuggestionBody");
+      const input = document.getElementById("messageInput");
+      if (!body || !input) return;
+
+      const content = (body.textContent || "").trim();
+      if (!content || content === "Gerando sugestao da IA...") return;
+
+      input.value = content;
+      input.focus();
+    }
+
+    function fallbackStartAutoRefresh() {
+      if (fallbackRefreshTimer) {
+        window.clearInterval(fallbackRefreshTimer);
+      }
+
+      fallbackRefreshTimer = window.setInterval(function () {
+        fallbackLoadConversations({ keepSelection: true, silent: true }).catch(function () {});
+        if (fallbackCurrentConversationId) {
+          fallbackRefreshCurrentConversation().catch(function () {});
+        }
+      }, 4000);
+    }
+
+    function fallbackUpdateConversationSummary(conversationId, conversationData) {
+      const item = fallbackConversationCache.find(function (entry) {
+        return String(entry.id) === String(conversationId);
+      }) || {};
+      const statusMeta = fallbackGetStatusMeta(item);
+
+      const chatSlaBadge = document.getElementById("chatSlaBadge");
+      const chatSectorBadge = document.getElementById("chatSectorBadge");
+      const chatAssignedBadge = document.getElementById("chatAssignedBadge");
+      const infoChannel = document.getElementById("conversationInfoChannel");
+      const infoQueue = document.getElementById("conversationInfoQueue");
+      const infoLastInteraction = document.getElementById("conversationInfoLastInteraction");
+      const infoPriority = document.getElementById("conversationInfoPriority");
+
+      if (chatSlaBadge) {
+        chatSlaBadge.className = "badge " + statusMeta.tone;
+        chatSlaBadge.textContent = statusMeta.label;
+      }
+      if (chatSectorBadge) {
+        chatSectorBadge.textContent = "Setor: " + (item.sector || "Central");
+      }
+      if (chatAssignedBadge) {
+        chatAssignedBadge.textContent = "Responsável: " + (item.user_name || "Nao assumida");
+      }
+      if (infoChannel) {
+        infoChannel.textContent = "WhatsApp";
+      }
+      if (infoQueue) {
+        infoQueue.textContent = fallbackFormatDurationFromDate(item.created_at);
+      }
+      if (infoLastInteraction) {
+        infoLastInteraction.textContent = fallbackFormatRelativeTime(item.last_message_time);
+      }
+      if (infoPriority) {
+        infoPriority.textContent = item.sla_breached ? "Alta" : (!item.is_read ? "Media" : "Normal");
+      }
+
+      fallbackUpdateReplyState();
+
+      const detailPanel = document.getElementById("conversationDetailsPanel");
+      if (detailPanel) {
+        detailPanel.classList.add("d-none");
+      }
+
+      const phone = item.client_phone ? String(item.client_phone).replace("@s.whatsapp.net", "") : null;
+      const subline = phone ? phone + " • Conversa #" + conversationId : "Conversa #" + conversationId;
+      const chatClientSubline = document.getElementById("chatClientSubline");
+      if (chatClientSubline) {
+        chatClientSubline.textContent = subline;
+      }
+    }
+
+    function fallbackFormatDateSeparator(dateString) {
+      const date = new Date(dateString);
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      function sameDay(a, b) {
+        return a.getFullYear() === b.getFullYear()
+          && a.getMonth() === b.getMonth()
+          && a.getDate() === b.getDate();
+      }
+
+      if (sameDay(date, today)) return "Hoje";
+      if (sameDay(date, yesterday)) return "Ontem";
+
+      return date.toLocaleDateString("pt-BR");
+    }
+
+    function fallbackRenderMessages(messages, options) {
+      const chat = document.getElementById("chatMessages");
+      if (!chat) return;
+      const opts = options || {};
+      const shouldScrollToBottom = opts.scrollToBottom !== false;
+
+      let lastDateKey = null;
+
+      chat.innerHTML = (messages || []).map(function (message) {
+        const senderClass = message.sender === "client" ? "client" : "agent";
+        const createdDate = message.created_at ? new Date(message.created_at) : null;
+        const createdAt = createdDate
+          ? createdDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+          : "";
+        const dateKey = createdDate ? createdDate.toDateString() : "sem-data";
+        const separator = dateKey !== lastDateKey
+          ? '<div class="date-separator">' + fallbackFormatDateSeparator(message.created_at) + '</div>'
+          : "";
+        lastDateKey = dateKey;
+
+        return separator + '' +
+          '<div class="chat-bubble ' + senderClass + '">' +
+            '<small class="message-time">' + createdAt + '</small>' +
+            '<div class="message-content">' + fallbackRenderMessageBody(message) + '</div>' +
+          '</div>';
+      }).join("");
+
+      chat.style.overflowY = "auto";
+      chat.style.scrollBehavior = "smooth";
+      if (shouldScrollToBottom) {
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    function fallbackOpenConversation(conversationId, options) {
+      const opts = options || {};
+      fallbackCurrentConversationId = conversationId;
+
+      const readRequest = opts.silentRead
+        ? Promise.resolve()
+        : fetch("/api/conversations/" + conversationId + "/read", {
+            method: "POST",
+            credentials: "same-origin"
+          }).catch(function () {});
+
+      return readRequest.then(function () {
+        return fetch("/api/conversations/" + conversationId, { credentials: "same-origin" });
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            return response.json()
+              .catch(function () { return {}; })
+              .then(function (payload) {
+                throw new Error(payload.error || "Nao foi possivel abrir a conversa");
+              });
+          }
+          return response.json();
+        })
+        .then(function (conversation) {
+          const name = conversation.client_name || "Sem nome";
+          const currentCard = document.querySelector('.conversation-item.active');
+          if (currentCard) currentCard.classList.remove("active");
+
+          const nextCard = document.querySelector('.conversation-item[data-conversation-id="' + conversationId + '"]');
+          if (nextCard) nextCard.classList.add("active");
+
+          const chatClient = document.getElementById("chatClient");
+          const chatClientAvatar = document.getElementById("chatClientAvatar");
+          const chatClientSubline = document.getElementById("chatClientSubline");
+          const conversationActions = document.getElementById("conversationActions");
+
+          if (chatClient) chatClient.textContent = name;
+          if (chatClientAvatar) chatClientAvatar.textContent = fallbackGetInitials(name);
+          if (conversationActions) conversationActions.classList.remove("d-none");
+
+          fallbackUpdateConversationSummary(conversationId, conversation);
+          fallbackRenderMessages(conversation.messages || [], {
+            scrollToBottom: opts.scrollToBottom !== false
+          });
+          return conversation;
+        })
+        .catch(function (error) {
+          const chat = document.getElementById("chatMessages");
+          if (chat) {
+            chat.innerHTML = '<div class="sector-item">Erro ao abrir conversa: ' + error.message + '</div>';
+          }
+          throw error;
+        });
+    }
+
+    function fallbackBindConversationClicks() {
+      const items = document.querySelectorAll("#conversationList .conversation-item");
+      items.forEach(function (item) {
+        item.addEventListener("click", function () {
+          const conversationId = item.getAttribute("data-conversation-id");
+          if (!conversationId) return;
+          fallbackOpenConversation(conversationId);
+        });
+      });
+    }
+
+    function fallbackRenderConversationList(items) {
+      const list = document.getElementById("conversationList");
+      const counter = document.getElementById("conversationCount");
+      const sidebarCounter = document.getElementById("sidebarConversationCount");
+      if (!list) return;
+
+      fallbackConversationCache = Array.isArray(items) ? items : [];
+
+      if (counter) {
+        counter.textContent = fallbackConversationCache.length + " ativa" + (fallbackConversationCache.length === 1 ? "" : "s");
+      }
+
+      if (sidebarCounter) {
+        sidebarCounter.textContent = String(fallbackConversationCache.length);
+      }
+
+      if (!fallbackConversationCache.length) {
+        list.innerHTML = '<div class="sector-item">Nenhuma conversa encontrada.</div>';
+        fallbackUpdateReplyState();
+        return;
+      }
+
+      list.innerHTML = fallbackConversationCache.map(function (item) {
+        const clientName = item.client_name || "Sem nome";
+        const sector = item.sector || "Central";
+        const statusMeta = fallbackGetStatusMeta(item);
+        const lastMessage = fallbackGetConversationPreview(item);
+        const date = item.last_message_time ? new Date(item.last_message_time) : null;
+        const exactTime = date
+          ? date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+          : "-";
+        const initials = clientName
+          .split(" ")
+          .filter(Boolean)
+          .slice(0, 2)
+          .map(function (part) { return part.charAt(0).toUpperCase(); })
+          .join("") || "?";
+        const activeClass = String(item.id) === String(fallbackCurrentConversationId) ? " active" : "";
+
+        return '' +
+          '<div class="conversation-item' + activeClass + '" data-conversation-id="' + item.id + '">' +
+            '<div class="conversation-layout">' +
+              '<div class="conversation-side">' +
+                '<div class="conversation-avatar">' + initials + '</div>' +
+                '<span class="badge primary conversation-sector-badge">' + sector + '</span>' +
+              '</div>' +
+              '<div class="conversation-body">' +
+                '<div class="conversation-top">' +
+                  '<div class="conversation-text">' +
+                    '<strong>' + clientName + '</strong>' +
+                  '</div>' +
+                  '<span class="conversation-time-pill">' + exactTime + '</span>' +
+                '</div>' +
+                '<div class="conversation-preview conversation-preview-inline">' + lastMessage + '</div>' +
+                '<div class="conversation-card-footer">' +
+                  '<div class="conversation-badges">' +
+                    '<span class="badge ' + statusMeta.tone + '">' + statusMeta.label + '</span>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+
+      fallbackBindConversationClicks();
+      fallbackUpdateReplyState();
+    }
+
+    function fallbackLoadConversations(options) {
+      const opts = options || {};
+      const keepSelection = opts.keepSelection !== false;
+      const silent = opts.silent === true;
+
+      return fetch("/api/dashboard/conversations", { credentials: "same-origin" })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error("Falha ao buscar conversas");
+          }
+          return response.json();
+        })
+        .then(function (conversations) {
+          if (!keepSelection) {
+            fallbackCurrentConversationId = null;
+          }
+          fallbackRenderConversationList(conversations);
+          return conversations;
+        })
+        .catch(function (error) {
+          const list = document.getElementById("conversationList");
+          if (list && !silent) {
+            list.innerHTML = '<div class="sector-item">Fallback: ' + error.message + '</div>';
+          }
+          throw error;
+        });
+    }
+
+    function fallbackLoadSectors() {
+      return fetch("/api/sectors", { credentials: "same-origin" })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error("Falha ao carregar setores");
+          }
+          return response.json();
+        })
+        .then(function (sectors) {
+          const select = document.getElementById("sectorSelect");
+          fallbackSectorsCache = Array.isArray(sectors) ? sectors : [];
+          if (!select) return fallbackSectorsCache;
+
+          select.innerHTML = '<option value="">Enviar para setor...</option>';
+          fallbackSectorsCache.forEach(function (sector) {
+            select.innerHTML += '<option value="' + sector.id + '">' + sector.name + '</option>';
+          });
+          return fallbackSectorsCache;
+        })
+        .catch(function () {
+          const select = document.getElementById("sectorSelect");
+          if (select) {
+            select.innerHTML = '<option value="">Nenhum setor disponivel</option>';
+          }
+          return [];
+        });
+    }
+
+    function fallbackEnsureAssigned() {
+      if (!fallbackCurrentConversationId) {
+        return Promise.reject(new Error("Selecione uma conversa primeiro"));
+      }
+
+      return fetch("/api/conversations/" + fallbackCurrentConversationId + "/assign", {
+        method: "POST",
+        credentials: "same-origin"
+      }).then(function (response) {
+        if (!response.ok) {
+          return response.json()
+            .catch(function () { return {}; })
+            .then(function (payload) {
+              throw new Error(payload.error || "Nao foi possivel assumir a conversa");
+            });
+        }
+        return response.json().catch(function () { return {}; });
+      });
+    }
+
+    function fallbackRenderCentralAiState(enabled) {
+      fallbackIaEnabled = !!enabled;
+
+      if (document.body && document.body.dataset) {
+        document.body.dataset.aiEnabled = fallbackIaEnabled ? "true" : "false";
+      }
+
+      const label = document.getElementById("iaLabel");
+      if (label) {
+        label.textContent = fallbackIaEnabled ? "IA: Ligada" : "IA: Humana";
+      }
+
+      const hint = document.getElementById("iaStatusHint");
+      if (hint) {
+        hint.textContent = fallbackIaEnabled
+          ? "A IA ajuda a triar e orientar o atendimento da central."
+          : "A central está operando apenas com atendimento humano.";
+      }
+
+      const button = document.getElementById("iaToggleBtn");
+      if (button) {
+        button.textContent = fallbackIaEnabled ? "IA: Ligada" : "IA: Desligada";
+        button.classList.toggle("off", !fallbackIaEnabled);
+      }
+    }
+
+    function fallbackToggleCentralAi() {
+      return fetch("/api/central/ai", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !fallbackIaEnabled })
+      }).then(function (response) {
+        if (!response.ok) {
+          throw new Error("Nao foi possivel atualizar a IA da central.");
+        }
+        fallbackRenderCentralAiState(!fallbackIaEnabled);
+      });
+    }
+
+    function fallbackBindActions() {
+      if (fallbackIsBindingActions) return;
+      fallbackIsBindingActions = true;
+
+      const sendButton = document.getElementById("sendMessageBtn");
+      const messageInput = document.getElementById("messageInput");
+      const assignButton = document.getElementById("assignBtn");
+      const markUnreadButton = document.getElementById("markUnread");
+      const sectorSelect = document.getElementById("sectorSelect");
+      const iaToggleBtn = document.getElementById("iaToggleBtn");
+      const assistantSuggestBtn = document.getElementById("assistantSuggestBtn");
+      const assistantRefreshBtn = document.getElementById("assistantRefreshBtn");
+      const assistantUseBtn = document.getElementById("assistantUseBtn");
+
+      function sendCurrentMessage() {
+        const content = messageInput ? messageInput.value.trim() : "";
+        if (!fallbackCurrentConversationId || !content) return Promise.resolve();
+        if (!fallbackCanReplyToCurrentConversation()) {
+          const chat = document.getElementById("chatMessages");
+          if (chat) {
+            chat.innerHTML += '<div class="sector-item">Assuma a conversa antes de responder ao cliente.</div>';
+            chat.scrollTop = chat.scrollHeight;
+          }
+          return Promise.resolve();
+        }
+
+        function doSend() {
+          return fetch("/api/messages", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversation_id: Number(fallbackCurrentConversationId),
+              content: content,
+              type: "text"
+            })
+          })
+            .then(async function (response) {
+              const data = await response.json().catch(function () { return {}; });
+              if (!response.ok) {
+                throw new Error(data.error || "Nao foi possivel enviar a mensagem");
+              }
+              return data;
+            });
+        }
+
+        if (sendButton) sendButton.disabled = true;
+
+        return doSend()
+          .then(function (sentMessage) {
+            if (messageInput) messageInput.value = "";
+
+            const chat = document.getElementById("chatMessages");
+            if (chat && sentMessage) {
+              const createdAt = sentMessage.created_at
+                ? new Date(sentMessage.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+                : "";
+              chat.innerHTML +=
+                '<div class="chat-bubble agent">' +
+                  '<small class="message-time">' + createdAt + '</small>' +
+                  '<div class="message-content">' + fallbackEscapeHtml(sentMessage.content || content) + '</div>' +
+                '</div>';
+              chat.scrollTop = chat.scrollHeight;
+            }
+
+            return fallbackLoadConversations({ keepSelection: true, silent: true })
+              .then(function () {
+                return fallbackOpenConversation(fallbackCurrentConversationId, { silentRead: true });
+              });
+          })
+          .catch(function (error) {
+            const chat = document.getElementById("chatMessages");
+            if (chat) {
+              chat.innerHTML += '<div class="sector-item">' + error.message + '</div>';
+              chat.scrollTop = chat.scrollHeight;
+            }
+          })
+          .finally(function () {
+            if (sendButton) sendButton.disabled = false;
+          });
+      }
+
+      if (sendButton) {
+        sendButton.addEventListener("click", sendCurrentMessage);
+      }
+
+      if (iaToggleBtn) {
+        iaToggleBtn.addEventListener("click", function () {
+          fallbackToggleCentralAi().catch(function (error) {
+            alert(error.message);
+          });
+        });
+      }
+
+      if (assistantSuggestBtn) {
+        assistantSuggestBtn.addEventListener("click", fallbackLoadAssistantSuggestion);
+      }
+
+      if (assistantRefreshBtn) {
+        assistantRefreshBtn.addEventListener("click", fallbackLoadAssistantSuggestion);
+      }
+
+      if (assistantUseBtn) {
+        assistantUseBtn.addEventListener("click", fallbackUseAssistantSuggestion);
+      }
+
+      if (messageInput) {
+        messageInput.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendCurrentMessage();
+          }
+        });
+      }
+
+      if (assignButton) {
+        assignButton.addEventListener("click", function () {
+          if (!fallbackCurrentConversationId) return;
+          fallbackEnsureAssigned()
+            .then(function () {
+              return fallbackLoadConversations({ keepSelection: true, silent: true })
+                .then(function () {
+                  return fallbackOpenConversation(fallbackCurrentConversationId, { silentRead: true });
+                });
+            })
+            .catch(function () {});
+        });
+      }
+
+      if (markUnreadButton) {
+        markUnreadButton.addEventListener("click", function () {
+          if (!fallbackCurrentConversationId) return;
+          fetch("/api/conversations/" + fallbackCurrentConversationId + "/unread", {
+            method: "POST",
+            credentials: "same-origin"
+          })
+            .then(function () {
+              fallbackLoadConversations({ keepSelection: true, silent: true }).catch(function () {});
+            })
+            .catch(function () {});
+        });
+      }
+
+      if (sectorSelect) {
+        sectorSelect.addEventListener("change", function () {
+          if (!fallbackCurrentConversationId || !sectorSelect.value) return;
+          fetch("/api/conversations/" + fallbackCurrentConversationId + "/sector", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sector_id: Number(sectorSelect.value) })
+          })
+            .then(function () {
+              sectorSelect.value = "";
+              fallbackResetConversationPanel();
+              document.getElementById("chatClientSubline").textContent = "Telefone não disponível • Conversa";
+              document.getElementById("conversationActions")?.classList.add("d-none");
+              fallbackLoadConversations({ keepSelection: false }).catch(function () {});
+            })
+            .catch(function () {
+              sectorSelect.value = "";
+            });
+        });
+      }
+    }
+
+    function fallbackBindDetailToggle() {
+      const detailToggleBtn = document.getElementById("detailToggleBtn");
+      const detailPanel = document.getElementById("conversationDetailsPanel");
+      if (!detailToggleBtn || !detailPanel) return;
+
+      detailToggleBtn.addEventListener("click", function () {
+        detailPanel.classList.toggle("d-none");
+      });
+    }
+
+    window.setTimeout(function () {
+      fallbackRenderCentralAiState(fallbackIaEnabled);
+      fallbackLoadConversations({ keepSelection: true, silent: true }).catch(function () {});
+      fallbackLoadSectors();
+      fallbackBindActions();
+      fallbackStartAutoRefresh();
+    }, 300);
+
+    window.setTimeout(function () {
+      fallbackBindDetailToggle();
+    }, 100);
+
+  </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3 class="mb-4">Painel Administrativo</h3>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5>Status do Sistema</h5>
+
+  <div class="row text-center">
+    <div class="col-md-4">
+      <strong>WhatsApp</strong><br>
+      {% if whatsapp_connected %}
+        <span class="text-success">Conectado</span>
+      {% else %}
+        <span class="text-danger">Desconectado</span>
+      {% endif %}
+    </div>
+
+    <div class="col-md-4">
+      <strong>Atendentes Online</strong><br>
+      {{ online_count }}
+    </div>
+
+    <div class="col-md-4">
+      <strong>Setores</strong><br>
+      {{ sectors|length }}
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5>Estrutura da Empresa</h5>
+
+  {% for sector in sectors %}
+    <div class="sector-box">
+      <div class="sector-title">
+        {{ sector.name }}
+      </div>
+
+      {% if sector.users %}
+        {% for user in sector.users %}
+          <div class="user-row">
+            <div class="user-info">
+              <span class="status-dot {% if user.last_seen and user.last_seen > online_limit %}online{% else %}offline{% endif %}"></span>
+              <span class="user-name">{{ user.name }}</span>
+            </div>
+
+            <div class="user-status">
+              {% if user.last_seen and user.last_seen > online_limit %}
+                Online
+              {% else %}
+                Offline
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-muted">Sem usuarios</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card shadow-sm p-3 text-center">
+      <h6>Conversas Abertas</h6>
+      <h4>{{ metrics.open_conversations }}</h4>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card shadow-sm p-3 text-center">
+      <h6>Tempo Medio</h6>
+      <h4>{{ metrics.avg_response }} min</h4>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card shadow-sm p-3 text-center">
+      <h6>SLA Estourado</h6>
+      <h4>{{ metrics.sla_breached }}</h4>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card shadow-sm p-3 text-center">
+      <h6>Total</h6>
+      <h4>{{ metrics.total }}</h4>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5>Atendimentos por Agente</h5>
+  <canvas id="agentChart"></canvas>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5>Buscar Atendimento</h5>
+
+  <div class="row g-2">
+    <div class="col-md-3">
+      <input type="text" id="filterClient" class="form-control" placeholder="Cliente">
+    </div>
+
+    <div class="col-md-3">
+      <input type="text" id="filterAgent" class="form-control" placeholder="Atendente">
+    </div>
+
+    <div class="col-md-3">
+      <input type="date" id="filterDate" class="form-control">
+    </div>
+
+    <div class="col-md-3">
+      <button class="btn btn-primary w-100" onclick="buscarConversas()">
+        Buscar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="conversationList" class="card shadow-sm p-3 mb-4"></div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5>Ranking</h5>
+
+  {% for agent in ranking %}
+    <div class="d-flex justify-content-between border-bottom py-2">
+      <strong>{{ loop.index }}º {{ agent.name }}</strong>
+      <small>{{ agent.count }} atendimentos</small>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-12 mb-4">
+    <div class="card shadow-sm p-3">
+      <h5>Fluxos da Central</h5>
+
+      {% if central_handoff_summary.sector_id %}
+        <div class="row text-center mb-3">
+          <div class="col-md-3">
+            <strong>Setor Central</strong><br>
+            {{ central_handoff_summary.sector_name }}
+          </div>
+          <div class="col-md-3">
+            <strong>Saidas da Central</strong><br>
+            {{ central_handoff_summary.outbound_handoffs }}
+          </div>
+          <div class="col-md-3">
+            <strong>Retornos para Central</strong><br>
+            {{ central_handoff_summary.inbound_handoffs }}
+          </div>
+          <div class="col-md-3">
+            <strong>Rotas Ativas</strong><br>
+            {{ central_handoff_summary.unique_outbound_paths + central_handoff_summary.unique_inbound_paths }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Central -> Setores</h6>
+            {% if central_outbound_paths %}
+              {% for path in central_outbound_paths %}
+                <div class="d-flex justify-content-between border-bottom py-2">
+                  <div>
+                    <strong>{{ path.to_sector_name }}</strong><br>
+                    <small>{{ path.count }} envios</small>
+                  </div>
+                  <div class="text-end">
+                    <small>
+                      tempo medio:
+                      {% if path.average_destination_minutes is not none %}
+                        {{ path.average_destination_minutes }} min
+                      {% else %}
+                        sem historico
+                      {% endif %}
+                    </small>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-muted">Nenhum envio da Central registrado ainda.</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <h6>Setores -> Central</h6>
+            {% if central_inbound_paths %}
+              {% for path in central_inbound_paths %}
+                <div class="d-flex justify-content-between border-bottom py-2">
+                  <div>
+                    <strong>{{ path.from_sector_name }}</strong><br>
+                    <small>{{ path.count }} retornos</small>
+                  </div>
+                  <div class="text-end">
+                    <small>
+                      tempo medio:
+                      {% if path.average_destination_minutes is not none %}
+                        {{ path.average_destination_minutes }} min
+                      {% else %}
+                        sem historico
+                      {% endif %}
+                    </small>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-muted">Nenhum retorno para a Central registrado ainda.</div>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div class="text-muted">Defina um setor central para acompanhar os fluxos da triagem.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm p-3 h-100">
+      <h5>Transferencias Entre Setores</h5>
+      <div class="text-muted small mb-3">
+        {{ handoff_summary.total_handoffs }} transferencias em {{ handoff_summary.unique_paths }} rotas
+      </div>
+
+      {% if handoff_paths %}
+        {% for path in handoff_paths %}
+          <div class="d-flex justify-content-between border-bottom py-2">
+            <div>
+              <strong>{{ path.from_sector_name }} -> {{ path.to_sector_name }}</strong><br>
+              <small>{{ path.unique_conversations }} conversas</small><br>
+              <small>
+                tempo medio no destino:
+                {% if path.average_destination_minutes is not none %}
+                  {{ path.average_destination_minutes }} min
+                {% else %}
+                  sem historico fechado
+                {% endif %}
+              </small>
+            </div>
+            <div class="text-end">
+              <strong>{{ path.count }}</strong><br>
+              <small>handoffs</small><br>
+              <small>
+                pico:
+                {% if path.longest_destination_minutes is not none %}
+                  {{ path.longest_destination_minutes }} min
+                {% else %}
+                  -
+                {% endif %}
+              </small>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-muted">Ainda nao houve transferencias entre setores.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm p-3 h-100">
+      <h5>Fluxo por Setor</h5>
+
+      {% if handoff_sectors %}
+        {% for sector in handoff_sectors %}
+          <div class="d-flex justify-content-between border-bottom py-2">
+            <div>
+              <strong>{{ sector.sector_name }}</strong><br>
+              <small>saldo {{ sector.handoff_balance }}</small>
+            </div>
+            <div class="text-end">
+              <small>Entradas {{ sector.incoming_handoffs }}</small><br>
+              <small>Saidas {{ sector.outgoing_handoffs }}</small>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-muted">Sem movimentacao entre setores ate o momento.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm p-3">
+  <h5>Ultimas Conversas</h5>
+
+  {% for conv in conversations %}
+    <div class="border-bottom py-2">
+      <strong>{{ conv.contact }}</strong><br>
+      <small>{{ conv.last_message }}</small>
+    </div>
+  {% endfor %}
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+
+<script>
+  initChart(
+    {{ ranking | map(attribute='name') | list | tojson }},
+    {{ ranking | map(attribute='count') | list | tojson }}
+  );
+</script>
+
+{% endblock %}

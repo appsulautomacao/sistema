@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Ops - Billing Events</h3>
+  <div class="mb-3">
+    <a class="btn btn-outline-secondary" href="{{ url_for('ops.clients') }}">Voltar para Clientes</a>
+  </div>
+
+  <div class="row g-2 mb-3">
+    <div class="col-md-3"><div class="card p-2"><strong>Total:</strong> {{ summary.total }}</div></div>
+    <div class="col-md-3"><div class="card p-2"><strong>Processados:</strong> {{ summary.processed }}</div></div>
+    <div class="col-md-3"><div class="card p-2"><strong>Pendentes:</strong> {{ summary.pending }}</div></div>
+    <div class="col-md-3"><div class="card p-2"><strong>Falharam:</strong> {{ summary.failed }}</div></div>
+    <div class="col-md-3"><div class="card p-2"><strong>Checkouts:</strong> {{ summary.checkout_sessions }}</div></div>
+    <div class="col-md-3"><div class="card p-2"><strong>Assinaturas:</strong> {{ summary.subscriptions }}</div></div>
+    <div class="col-md-3"><div class="card p-2"><strong>Pagamentos OK:</strong> {{ summary.paid_transactions }}</div></div>
+  </div>
+
+  <div class="card p-3">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Criado em</th>
+          <th>Tipo</th>
+          <th>Status Pagamento</th>
+          <th>Plano</th>
+          <th>Pagamento</th>
+          <th>Empresa</th>
+          <th>Admin</th>
+          <th>Processamento</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+        <tr>
+          <td>{{ event.id }}</td>
+          <td>{{ event.created_at.strftime("%d/%m %H:%M:%S") if event.created_at else "-" }}</td>
+          <td>{{ event.event_type or "-" }}</td>
+          <td>{{ event.payment_status or "-" }}</td>
+          <td>{{ event.plan_code or "-" }}</td>
+          <td>
+            {{ event.payment_method or "-" }}
+            {% if event.installment_count %}
+            <div><small>{{ event.installment_count }}x</small></div>
+            {% endif %}
+          </td>
+          <td>{{ event.company_name or "-" }}</td>
+          <td>{{ event.admin_email or "-" }}</td>
+          <td>
+            {% if event.processed %}
+              <span class="badge bg-success">Processado</span>
+              {% if event.processing_error %}
+                <div><small>{{ event.processing_error }}</small></div>
+              {% endif %}
+            {% elif event.processing_error == "__processing__" %}
+              <span class="badge bg-info">Processando</span>
+            {% elif event.processing_error %}
+              <span class="badge bg-danger">Falhou</span>
+              <div><small>{{ event.processing_error }}</small></div>
+            {% else %}
+              <span class="badge bg-warning text-dark">Pendente</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not event.processed %}
+            <form method="POST" action="{{ url_for('ops.reprocess_billing_event', event_id=event.id) }}" style="display:inline;">
+              <button class="btn btn-sm btn-outline-primary">Reprocessar</button>
+            </form>
+            {% else %}
+              <button class="btn btn-sm btn-outline-secondary" disabled>OK</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

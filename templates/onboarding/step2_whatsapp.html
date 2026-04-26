@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <div class="card p-4 shadow text-center">
+
+        <h4>📱 Conectar WhatsApp</h4>
+        <p class="text-muted">Escaneie o QR Code para ativar seu atendimento</p>
+
+        <div id="qr-area" class="my-4">
+            <p>Carregando QR Code...</p>
+        </div>
+
+        <div id="status" class="mb-3 text-muted">
+            Aguardando conexão...
+        </div>
+
+        <button id="connect-btn" class="btn btn-success">
+            Gerar QR Code
+        </button>
+
+        <button id="continue-btn" class="btn btn-primary mt-3" style="display:none;">
+            Continuar
+        </button>
+
+    </div>
+</div>
+
+<script>
+
+document.getElementById("connect-btn").onclick = async () => {
+    await startQrFlow();
+};
+
+async function startQrFlow() {
+    document.getElementById("status").innerHTML = "Gerando QR Code...";
+    await fetch("/api/whatsapp/connect", { method: "POST" });
+    await loadQR();
+}
+
+async function loadQR() {
+    const res = await fetch("/api/whatsapp/qrcode");
+    const data = await res.json();
+
+    if (data.qr) {
+        document.getElementById("qr-area").innerHTML =
+            `<img src="${data.qr}" width="250">`;
+        document.getElementById("status").innerHTML =
+            "Escaneie o QR Code no seu WhatsApp.";
+    } else {
+        document.getElementById("qr-area").innerHTML =
+            "<p>QR Code nao disponivel no momento</p>";
+        document.getElementById("status").innerHTML =
+            "Nao foi possivel gerar o QR agora. Clique em 'Gerar QR Code' para tentar novamente.";
+    }
+}
+
+async function checkStatus() {
+    const res = await fetch("/api/whatsapp/status");
+    const data = await res.json();
+
+    console.log("STATUS:", data);
+
+    const isConnected =
+        data?.status === "open" ||
+        data?.instance?.state === "open";
+
+    if (isConnected) {
+        document.getElementById("status").innerHTML =
+            "✅ WhatsApp conectado!";
+
+        setTimeout(async () => {
+
+            await fetch("/onboarding/finish", { method: "POST" });
+
+            window.location.href = "/admin/settings";
+
+        }, 1500);
+    }
+}
+
+// verifica status a cada 3s
+setInterval(checkStatus, 3000);
+
+// tenta iniciar automaticamente quando abrir a tela
+startQrFlow();
+
+</script>
+
+{% endblock %}

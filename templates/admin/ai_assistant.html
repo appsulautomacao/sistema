@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-1">Assistente Virtual</h3>
+    <div class="text-muted">Teste o prompt do assistente com base no RAG da empresa.</div>
+  </div>
+  <a class="btn btn-outline-secondary" href="/admin/settings">Configurar prompt</a>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <div class="mb-2"><strong>Empresa:</strong> {{ company.name }}</div>
+  <div><strong>Arquivo RAG:</strong> {{ company.rag_document_path or 'Nenhum arquivo vinculado' }}</div>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+  <h5 class="mb-3">Simulação de mensagem</h5>
+  <form method="POST">
+    <div class="mb-3">
+      <label>Mensagem do cliente</label>
+      <textarea class="form-control" name="customer_message" rows="5" placeholder="Ex.: Qual o horário de atendimento e o valor do boleto em preto e branco?">{{ customer_message }}</textarea>
+    </div>
+    <button class="btn btn-primary">Gerar sugestão</button>
+  </form>
+</div>
+
+{% if preview %}
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card shadow-sm p-3 h-100">
+      <h5>Resposta sugerida</h5>
+      <div class="small text-muted mb-2">
+        provedor: {{ preview.provider }} | modelo: {{ preview.model or '-' }}
+      </div>
+      {% if preview.reply %}
+        <div class="ai-audit-text">{{ preview.reply }}</div>
+      {% else %}
+        <div class="empty-state">Não foi possível gerar uma sugestão. {{ preview.reason or '' }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm p-3 h-100">
+      <h5>Contexto recuperado</h5>
+      {% if preview.rag_result.results %}
+        <div class="ai-audit-list">
+          {% for item in preview.rag_result.results %}
+            <div class="ai-audit-item">
+              <div class="ai-audit-meta mb-2">
+                <span class="ai-pill">Trecho #{{ item.index }}</span>
+                <span class="ai-pill ai-pill-primary">Score {{ item.score }}</span>
+              </div>
+              <div class="ai-audit-text">{{ item.content }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">Nenhum trecho do RAG foi recuperado para esta pergunta.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
