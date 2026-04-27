@@ -2,6 +2,7 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash
 
+from core.super_admin import is_super_admin_user
 from models import Company, CompanySettings, User
 
 
@@ -9,6 +10,9 @@ main_bp = Blueprint("main", __name__)
 
 
 def _post_login_redirect(user):
+    if is_super_admin_user(user):
+        return redirect(url_for("ops.clients"))
+
     settings = CompanySettings.query.filter_by(company_id=user.company_id).first()
     if settings and settings.plan == "blocked":
         return "Conta da empresa bloqueada. Fale com o suporte.", 403
@@ -28,6 +32,9 @@ def _post_login_redirect(user):
 @main_bp.route("/dashboard")
 @login_required
 def dashboard():
+    if is_super_admin_user(current_user):
+        return redirect(url_for("ops.clients"))
+
     # ADMIN tambem pode usar a central e acessar o administrativo pelo menu.
     if current_user.role == "ADMIN":
         return render_template(
