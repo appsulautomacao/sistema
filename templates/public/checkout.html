@@ -55,11 +55,6 @@
                     </div>
                 </div>
 
-                <hr class="my-4">
-
-                <h5>Metadados obrigatorios para o gateway</h5>
-                <pre class="bg-light border rounded p-3 small mb-0">{{ checkout_payload | tojson(indent=2) }}</pre>
-
                 <div class="mt-4 d-flex gap-2">
                     {% if pay_url %}
                     <a class="btn btn-primary" href="{{ pay_url }}">Abrir checkout PagBank</a>
