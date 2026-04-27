@@ -9,6 +9,7 @@ from models import (
     CompanySettings,
     PaymentTransaction,
     Subscription,
+    User,
 )
 
 
@@ -172,6 +173,22 @@ def create_checkout_session(
     success_url=None,
     cancel_url=None,
 ):
+    normalized_admin_email = (admin_email or "").strip().lower()
+    if not normalized_admin_email:
+        raise ValueError("E-mail do responsavel e obrigatorio.")
+
+    existing_user = User.query.filter_by(email=normalized_admin_email).first()
+    if existing_user:
+        raise ValueError("Este e-mail ja esta cadastrado. Use outro e-mail ou recupere o acesso existente.")
+
+    existing_checkout = CheckoutSession.query.filter(
+        CheckoutSession.admin_email == normalized_admin_email,
+        CheckoutSession.status.in_(["created", "provider_created", "paid"]),
+        CheckoutSession.expires_at > datetime.utcnow(),
+    ).order_by(CheckoutSession.created_at.desc()).first()
+    if existing_checkout:
+        raise ValueError("Ja existe uma compra iniciada com este e-mail. Use outro e-mail ou fale com o suporte.")
+
     plan = get_billing_plan_by_code(plan_code)
     if not plan:
         raise ValueError("Plano nao encontrado.")
@@ -214,7 +231,7 @@ def create_checkout_session(
         plan_id=plan.id,
         company_name=(company_name or "").strip(),
         admin_name=(admin_name or "Admin").strip() or "Admin",
-        admin_email=(admin_email or "").strip().lower(),
+        admin_email=normalized_admin_email,
         customer_document=(customer_document or "").strip() or None,
         payment_method=method,
         installment_count=installments,

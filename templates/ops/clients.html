@@ -48,25 +48,33 @@
 
   <div class="card p-3">
     <h5>Clientes</h5>
-    <table class="table table-striped">
+    <table class="table table-striped align-middle">
       <thead>
         <tr>
           <th>Empresa</th>
           <th>Status</th>
-          <th>Admin URL</th>
+          <th>Admin</th>
+          <th>Plano / Validade</th>
           <th>Usuarios</th>
-          <th>Conversas</th>
-          <th>Mensagens</th>
-          <th>Assinaturas</th>
+          <th>Uso</th>
+          <th>IA</th>
           <th>Pagamentos</th>
-          <th>Anexos (bytes)</th>
+          <th>Armazenamento</th>
           <th>Acoes</th>
         </tr>
       </thead>
       <tbody>
         {% for row in company_rows %}
         <tr>
-          <td>{{ row.company.name }}</td>
+          <td>
+            <strong>{{ row.company.name }}</strong>
+            <div>
+              <a href="{{ request.host_url }}{{ row.company.slug }}/login" target="_blank">
+                {{ row.company.slug }}/login
+              </a>
+            </div>
+            <small class="text-muted">id={{ row.company.id }}</small>
+          </td>
           <td>
             {% if row.plan == 'blocked' %}
             <span class="badge bg-danger">Bloqueado</span>
@@ -75,21 +83,40 @@
             {% endif %}
           </td>
           <td>
-            <a href="{{ request.host_url }}{{ row.company.slug }}/login" target="_blank">
-              {{ row.company.slug }}/login
-            </a>
-          </td>
-          <td>{{ row.users_count }}</td>
-          <td>{{ row.conversations_count }}</td>
-          <td>{{ row.messages_count }}</td>
-          <td>
-            {{ row.subscriptions_count }}
-            {% if row.latest_subscription %}
-            <div><small>{{ row.latest_subscription.plan.code }} / {{ row.latest_subscription.status }}</small></div>
+            {% if row.admin_user %}
+              <div>{{ row.admin_user.name }}</div>
+              <small>{{ row.admin_user.email }}</small>
+            {% else %}
+              <span class="text-muted">Sem admin</span>
             {% endif %}
           </td>
-          <td>{{ row.paid_transactions_count }}</td>
-          <td>{{ row.attachments_bytes }}</td>
+          <td>
+            {% if row.latest_subscription %}
+              <div><strong>{{ row.latest_subscription.plan.name }}</strong></div>
+              <small>Status: {{ row.latest_subscription.status }}</small>
+              <div><small>Valor: {{ row.latest_subscription_amount_display }}</small></div>
+              <div><small>Validade: {{ row.latest_subscription.current_period_end.strftime("%d/%m/%Y") if row.latest_subscription.current_period_end else "-" }}</small></div>
+            {% else %}
+              <span class="text-muted">Sem assinatura</span>
+            {% endif %}
+          </td>
+          <td>{{ row.users_count }}</td>
+          <td>
+            <div>{{ row.conversations_count }} conversas</div>
+            <small>{{ row.messages_count }} mensagens</small>
+          </td>
+          <td>
+            <div>{{ row.ai_logs_count }} chamadas</div>
+            <small>{{ row.ai_fallback_count }} fallback</small>
+          </td>
+          <td>
+            <div>{{ row.paid_transactions_count }} pagos</div>
+            <small>{{ row.paid_amount_display }}</small>
+            {% if row.latest_transaction %}
+              <div><small>Ultimo: {{ row.latest_transaction.created_at.strftime("%d/%m/%Y") if row.latest_transaction.created_at else "-" }}</small></div>
+            {% endif %}
+          </td>
+          <td>{{ row.attachments_display }}</td>
           <td>
             {% if row.plan == 'blocked' %}
             <form method="POST" action="{{ url_for('ops.activate_client', company_id=row.company.id) }}" style="display:inline;">

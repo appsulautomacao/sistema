@@ -3,13 +3,22 @@ from flask_login import current_user, login_required
 from sqlalchemy import func
 from werkzeug.security import generate_password_hash
 
-from core.billing_service import enqueue_pagseguro_payload, process_billing_event
-from core.company_provisioning import generate_temporary_password, provision_company_with_admin
+from core.billing_service import (
+    enqueue_pagseguro_payload,
+    process_billing_event,
+    should_send_credentials_email,
+)
+from core.company_provisioning import (
+    generate_temporary_password,
+    provision_company_with_admin,
+    send_credentials_email,
+)
 from core.super_admin import is_super_admin_user
 from db import db
 from models import (
     BillingEvent,
     CheckoutSession,
+    AILog,
     Company,
     CompanySettings,
     Conversation,
@@ -39,6 +48,19 @@ def _ensure_settings(company_id):
     return settings
 
 
+def _format_brl(cents):
+    value = (cents or 0) / 100
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _format_bytes(size_bytes):
+    value = float(size_bytes or 0)
+    for unit in ["B", "KB", "MB", "GB"]:
+        if value < 1024 or unit == "GB":
+            return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} B"
+        value /= 1024
+
+
 @ops_bp.route("/")
 @login_required
 def index():
@@ -65,7 +87,17 @@ def clients():
         messages_count = Message.query.filter_by(company_id=company.id).count()
         subscriptions_count = Subscription.query.filter_by(company_id=company.id).count()
         latest_subscription = Subscription.query.filter_by(company_id=company.id).order_by(Subscription.created_at.desc()).first()
+        latest_transaction = PaymentTransaction.query.filter_by(company_id=company.id).order_by(PaymentTransaction.created_at.desc()).first()
+        admin_user = User.query.filter_by(company_id=company.id, role="ADMIN").order_by(User.id.asc()).first()
         paid_transactions_count = PaymentTransaction.query.filter_by(company_id=company.id, status="paid").count()
+        paid_amount_cents = db.session.query(
+            func.coalesce(func.sum(PaymentTransaction.amount_cents), 0)
+        ).filter(
+            PaymentTransaction.company_id == company.id,
+            PaymentTransaction.status == "paid",
+        ).scalar() or 0
+        ai_logs_count = AILog.query.filter_by(company_id=company.id).count()
+        ai_fallback_count = AILog.query.filter_by(company_id=company.id, used_fallback=True).count()
         attachments_bytes = db.session.query(
             func.coalesce(func.sum(MessageAttachment.size_bytes), 0)
         ).filter(
@@ -80,8 +112,15 @@ def clients():
             "messages_count": messages_count,
             "subscriptions_count": subscriptions_count,
             "latest_subscription": latest_subscription,
+            "latest_subscription_amount_display": _format_brl(latest_subscription.amount_cents) if latest_subscription else None,
+            "latest_transaction": latest_transaction,
+            "admin_user": admin_user,
             "paid_transactions_count": paid_transactions_count,
+            "paid_amount_display": _format_brl(int(paid_amount_cents)),
+            "ai_logs_count": ai_logs_count,
+            "ai_fallback_count": ai_fallback_count,
             "attachments_bytes": int(attachments_bytes),
+            "attachments_display": _format_bytes(attachments_bytes),
         })
 
     latest_provision = session.pop("ops_latest_provision", None)
@@ -159,7 +198,7 @@ def run_simulator():
             "admin_email": admin_email_value,
             "temporary_password": response.get("temporary_password"),
             "login_url": response["login_url"],
-            "email_result": None,
+            "email_result": response.get("email_result"),
         }
         flash("Simulacao concluida: cliente provisionado com sucesso.", "success")
         return redirect(url_for("ops.clients"))
@@ -225,7 +264,7 @@ def reprocess_billing_event(event_id):
             "admin_email": response.get("admin_email") or (admin_user.email if admin_user else "-"),
             "temporary_password": response.get("temporary_password"),
             "login_url": response["login_url"],
-            "email_result": None,
+            "email_result": response.get("email_result"),
         }
         flash("Evento reprocessado com provisionamento concluido.", "success")
         return redirect(url_for("ops.clients"))
@@ -315,6 +354,17 @@ def reset_admin_password(company_id):
     temporary_password = generate_temporary_password()
     admin_user.password = generate_password_hash(temporary_password)
     admin_user.is_first_login = True
+    login_url = f"{request.host_url.rstrip('/')}/{company.slug}/login"
+    email_result = None
+    if should_send_credentials_email():
+        sent, detail = send_credentials_email(
+            admin_email=admin_user.email,
+            admin_name=admin_user.name,
+            company_name=company.name,
+            login_url=login_url,
+            password=temporary_password,
+        )
+        email_result = {"sent": sent, "detail": detail}
     db.session.commit()
 
     session["ops_latest_provision"] = {
@@ -324,9 +374,12 @@ def reset_admin_password(company_id):
         "admin_name": admin_user.name,
         "admin_email": admin_user.email,
         "temporary_password": temporary_password,
-        "login_url": f"{request.host_url.rstrip('/')}/{company.slug}/login",
-        "email_result": None,
+        "login_url": login_url,
+        "email_result": email_result,
     }
 
-    flash("Senha do admin resetada com sucesso.", "success")
+    if email_result and not email_result["sent"]:
+        flash(f"Senha resetada, mas o e-mail falhou: {email_result['detail']}", "warning")
+    else:
+        flash("Senha do admin resetada com sucesso.", "success")
     return redirect(url_for("ops.clients"))

@@ -55,6 +55,20 @@
               {% if event.processing_error %}
                 <div><small>{{ event.processing_error }}</small></div>
               {% endif %}
+              {% set email_result = event.payload_json.get("_processing", {}).get("credentials_email") if event.payload_json else None %}
+              {% if email_result %}
+                <div>
+                  <small>
+                    E-mail:
+                    {% if email_result.sent %}
+                      enviado
+                    {% else %}
+                      falhou
+                    {% endif %}
+                    - {{ email_result.detail }}
+                  </small>
+                </div>
+              {% endif %}
             {% elif event.processing_error == "__processing__" %}
               <span class="badge bg-info">Processando</span>
             {% elif event.processing_error %}
