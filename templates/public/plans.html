@@ -1,92 +1,280 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row align-items-start mb-4">
-    <div class="col-lg-7">
-        <h1 class="mb-3">Planos e formas de pagamento</h1>
-        <p class="text-muted mb-0">
-            Escolha o plano comercial e a forma de pagamento. O checkout registra mensal, anual,
-            a vista e parcelamento para o webhook ativar a empresa com o plano certo.
-        </p>
-    </div>
-</div>
+<style>
+  .public-plans {
+    --appsul-ink: #25272b;
+    --appsul-muted: #667085;
+    --appsul-line: #e7e9ee;
+    --appsul-soft: #f7f8fa;
+    --appsul-accent: #111827;
+    color: var(--appsul-ink);
+  }
 
-<div class="row g-4">
-    {% for plan in plans %}
-    <div class="col-lg-3 col-md-6">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                {% if plan.highlight_text %}
-                <span class="badge text-bg-warning mb-3">{{ plan.highlight_text }}</span>
-                {% endif %}
-                <h5 class="card-title">{{ plan.name }}</h5>
-                <div class="display-6 mb-2">{{ plan.price_display }}</div>
-                <p class="text-muted">{{ plan.description }}</p>
-                <ul class="small text-muted ps-3">
-                    <li>Periodo: {{ plan.billing_period }}</li>
-                    <li>Parcelamento maximo: {{ plan.max_installments }}x</li>
-                    <li>PIX: {{ "sim" if plan.allow_pix else "nao" }}</li>
-                    <li>Boleto: {{ "sim" if plan.allow_boleto else "nao" }}</li>
-                </ul>
-            </div>
+  .plans-header,
+  .plans-hero,
+  .checkout-panel,
+  .plan-card,
+  .benefit-card {
+    border: 1px solid var(--appsul-line);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .plans-header {
+    min-height: 72px;
+  }
+
+  .appsul-logo {
+    height: 44px;
+    width: auto;
+    display: block;
+  }
+
+  .plans-hero {
+    overflow: hidden;
+    background:
+      linear-gradient(120deg, rgba(255,255,255,0.98), rgba(255,255,255,0.86)),
+      url("https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=80");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .plans-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--appsul-line);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--appsul-accent);
+    background: rgba(255, 255, 255, 0.76);
+  }
+
+  .hero-title {
+    max-width: 760px;
+    font-size: clamp(2rem, 4vw, 4.2rem);
+    line-height: 1.02;
+    letter-spacing: 0;
+  }
+
+  .hero-copy {
+    max-width: 680px;
+    color: var(--appsul-muted);
+    font-size: 1.08rem;
+  }
+
+  .hero-metric {
+    border-left: 3px solid var(--appsul-accent);
+    padding-left: 14px;
+  }
+
+  .plan-card {
+    height: 100%;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .plan-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  }
+
+  .plan-price {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .benefit-card {
+    background: var(--appsul-soft);
+  }
+
+  .checkout-panel {
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07);
+  }
+
+  .btn-appsul {
+    background: var(--appsul-accent);
+    border-color: var(--appsul-accent);
+    color: #fff;
+  }
+
+  .btn-appsul:hover {
+    background: #000;
+    border-color: #000;
+    color: #fff;
+  }
+
+  @media (max-width: 767.98px) {
+    .plans-header {
+      align-items: flex-start !important;
+      gap: 14px;
+    }
+
+    .plans-header-actions {
+      width: 100%;
+    }
+
+    .plans-header-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<div class="public-plans">
+  <header class="plans-header d-flex align-items-center justify-content-between flex-wrap px-3 px-md-4 py-3 mb-4">
+    <a href="https://appsul.com.br" class="d-inline-flex align-items-center text-decoration-none">
+      <img class="appsul-logo" src="{{ url_for('static', filename='img/appsul-logo.jpg') }}" alt="App Sul">
+    </a>
+    <div class="plans-header-actions d-flex gap-2">
+      <a class="btn btn-sm btn-outline-dark" href="https://appsul.com.br" target="_blank" rel="noopener">Site App Sul</a>
+      <a class="btn btn-sm btn-appsul" href="#checkout">Comecar agora</a>
+    </div>
+  </header>
+
+  <section class="plans-hero p-4 p-lg-5 mb-4">
+    <span class="plans-eyebrow mb-4">Automacao para WhatsApp, atendimento e IA</span>
+    <h1 class="hero-title fw-bold mb-3">Venda, atenda e acompanhe clientes em uma central inteligente.</h1>
+    <p class="hero-copy mb-4">
+      A App Sul cria solucoes para automatizar processos. Esta plataforma leva esse mesmo padrao para o WhatsApp:
+      atendimento organizado por equipe, onboarding guiado, historico, IA e painel de operacao.
+    </p>
+    <div class="row g-3 mt-2">
+      <div class="col-md-4">
+        <div class="hero-metric">
+          <strong>Ativacao rapida</strong>
+          <div class="text-muted small">Checkout, pagamento e criacao do acesso em poucos passos.</div>
         </div>
+      </div>
+      <div class="col-md-4">
+        <div class="hero-metric">
+          <strong>WhatsApp centralizado</strong>
+          <div class="text-muted small">Conversas, setores, anexos e usuarios em um unico painel.</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="hero-metric">
+          <strong>IA como apoio</strong>
+          <div class="text-muted small">Classificacao, sugestoes e consulta a documentos da empresa.</div>
+        </div>
+      </div>
     </div>
-    {% endfor %}
-</div>
+  </section>
 
-<div class="card shadow-sm mt-4">
-    <div class="card-body">
-        <h4 class="mb-3">Iniciar checkout comercial</h4>
-        <form method="POST" action="{{ url_for('commercial.start_checkout') }}" class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Plano</label>
-                <select class="form-select" name="plan_code" required>
-                    <option value="">Selecione</option>
-                    {% for plan in plans %}
-                    <option value="{{ plan.code }}">{{ plan.name }} - {{ plan.price_display }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Empresa</label>
-                <input class="form-control" type="text" name="company_name" required>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Responsavel</label>
-                <input class="form-control" type="text" name="admin_name" value="Admin">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">E-mail</label>
-                <input class="form-control" type="email" name="admin_email" required>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Documento</label>
-                <input class="form-control" type="text" name="customer_document" placeholder="CPF ou CNPJ">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Pagamento</label>
-                <select class="form-select" name="payment_method">
-                    <option value="card">Cartao</option>
-                    <option value="pix">PIX</option>
-                    <option value="boleto">Boleto</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Parcelas</label>
-                <select class="form-select" name="installment_count">
-                    {% for item in range(1, 13) %}
-                    <option value="{{ item }}">{{ item }}x</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Cupom</label>
-                <input class="form-control" type="text" name="coupon_code">
-            </div>
-            <div class="col-12">
-                <button class="btn btn-primary">Criar sessao de checkout</button>
-            </div>
-        </form>
+  <section class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="benefit-card p-3 h-100">
+        <strong>Organize sua equipe</strong>
+        <p class="text-muted small mb-0">Distribua atendimentos por setor e acompanhe conversas sem perder contexto.</p>
+      </div>
     </div>
+    <div class="col-md-4">
+      <div class="benefit-card p-3 h-100">
+        <strong>Automatize o inicio</strong>
+        <p class="text-muted small mb-0">Acesso, senha temporaria e onboarding do cliente saem do fluxo manual.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="benefit-card p-3 h-100">
+        <strong>Acompanhe resultado</strong>
+        <p class="text-muted small mb-0">Painel Ops com clientes, pagamentos, validade do plano e consumo operacional.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-4">
+    <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="h3 mb-1">Escolha seu plano</h2>
+        <p class="text-muted mb-0">Comece com o modelo que combina com sua operacao.</p>
+      </div>
+      <a class="btn btn-outline-dark" href="#checkout">Ir para checkout</a>
+    </div>
+
+    <div class="row g-4">
+      {% for plan in plans %}
+      <div class="col-lg-3 col-md-6">
+        <div class="plan-card p-3">
+          {% if plan.highlight_text %}
+          <span class="badge text-bg-dark mb-3">{{ plan.highlight_text }}</span>
+          {% endif %}
+          <h3 class="h5 mb-2">{{ plan.name }}</h3>
+          <div class="plan-price mb-2">{{ plan.price_display }}</div>
+          <p class="text-muted small">{{ plan.description }}</p>
+          <ul class="small text-muted ps-3 mb-0">
+            <li>Periodo: {{ plan.billing_period }}</li>
+            <li>Parcelamento: ate {{ plan.max_installments }}x</li>
+            <li>PIX: {{ "sim" if plan.allow_pix else "nao" }}</li>
+            <li>Boleto: {{ "sim" if plan.allow_boleto else "nao" }}</li>
+          </ul>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="checkout" class="checkout-panel p-3 p-md-4 mb-4">
+    <div class="row g-4 align-items-start">
+      <div class="col-lg-4">
+        <h2 class="h4 mb-2">Iniciar contratacao</h2>
+        <p class="text-muted mb-0">
+          Preencha os dados da empresa e escolha a forma de pagamento. O e-mail informado sera usado para o acesso inicial.
+        </p>
+      </div>
+      <div class="col-lg-8">
+        <form method="POST" action="{{ url_for('commercial.start_checkout') }}" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Plano</label>
+            <select class="form-select" name="plan_code" required>
+              <option value="">Selecione</option>
+              {% for plan in plans %}
+              <option value="{{ plan.code }}">{{ plan.name }} - {{ plan.price_display }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Empresa</label>
+            <input class="form-control" type="text" name="company_name" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Responsavel</label>
+            <input class="form-control" type="text" name="admin_name" value="Admin">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">E-mail de acesso</label>
+            <input class="form-control" type="email" name="admin_email" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Documento</label>
+            <input class="form-control" type="text" name="customer_document" placeholder="CPF ou CNPJ">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Pagamento</label>
+            <select class="form-select" name="payment_method">
+              <option value="card">Cartao</option>
+              <option value="pix">PIX</option>
+              <option value="boleto">Boleto</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Parcelas</label>
+            <select class="form-select" name="installment_count">
+              {% for item in range(1, 13) %}
+              <option value="{{ item }}">{{ item }}x</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cupom</label>
+            <input class="form-control" type="text" name="coupon_code">
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <button class="btn btn-appsul w-100">Continuar para pagamento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
 </div>
 {% endblock %}
