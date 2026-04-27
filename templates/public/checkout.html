@@ -70,19 +70,5 @@
         </div>
     </div>
 
-    <div class="col-lg-5">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="mb-3">Fluxo operacional</h5>
-                <ol class="mb-0">
-                    <li>Cliente escolhe o plano e cria a sessao.</li>
-                    <li>Gateway recebe o pagamento com estes metadados.</li>
-                    <li>Webhook aprovado chega em <code>/webhooks/pagseguro</code>.</li>
-                    <li>Billing cria empresa, assinatura e transacao.</li>
-                    <li>Ops acompanha tudo em <code>/ops/billing-events</code>.</li>
-                </ol>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
