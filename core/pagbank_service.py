@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import os
+import re
 
 import requests
 
@@ -34,6 +35,54 @@ def _is_public_url(value):
     if "localhost" in text or "127.0.0.1" in text:
         return False
     return True
+
+
+def _only_digits(value):
+    return re.sub(r"\D+", "", value or "")
+
+
+def _is_valid_cpf(digits):
+    if len(digits) != 11 or len(set(digits)) == 1:
+        return False
+
+    numbers = [int(item) for item in digits]
+    for position in (9, 10):
+        total = sum(numbers[index] * ((position + 1) - index) for index in range(position))
+        check_digit = (total * 10) % 11
+        if check_digit == 10:
+            check_digit = 0
+        if numbers[position] != check_digit:
+            return False
+    return True
+
+
+def _is_valid_cnpj(digits):
+    if len(digits) != 14 or len(set(digits)) == 1:
+        return False
+
+    numbers = [int(item) for item in digits]
+    first_weights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    second_weights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+    first_total = sum(numbers[index] * first_weights[index] for index in range(12))
+    first_digit = 11 - (first_total % 11)
+    if first_digit >= 10:
+        first_digit = 0
+    if numbers[12] != first_digit:
+        return False
+
+    second_total = sum(numbers[index] * second_weights[index] for index in range(13))
+    second_digit = 11 - (second_total % 11)
+    if second_digit >= 10:
+        second_digit = 0
+    return numbers[13] == second_digit
+
+
+def normalize_pagbank_tax_id(value):
+    digits = _only_digits(value)
+    if _is_valid_cpf(digits) or _is_valid_cnpj(digits):
+        return digits
+    return None
 
 
 def _build_payment_methods(session, plan):
@@ -111,8 +160,9 @@ def build_pagbank_checkout_payload(session, plan, webhook_url=None, return_url=N
         "soft_descriptor": (os.getenv("PAGBANK_SOFT_DESCRIPTOR") or "APPSUL").strip()[:17],
     }
 
-    if session.customer_document:
-        payload["customer"]["tax_id"] = session.customer_document
+    tax_id = normalize_pagbank_tax_id(session.customer_document)
+    if tax_id:
+        payload["customer"]["tax_id"] = tax_id
 
     if expiration_value:
         payload["expiration_date"] = expiration_value
