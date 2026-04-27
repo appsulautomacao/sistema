@@ -145,6 +145,12 @@ def process_billing_event(event_id, base_url, include_sensitive=False, force=Fal
     event.processed = True
     event.processing_error = None
     event.processed_at = datetime.utcnow()
+    event.payload_json = {
+        **(event.payload_json or {}),
+        "_processing": {
+            "credentials_email": result.get("email_result"),
+        },
+    }
     db.session.commit()
 
     selected_plan = None
