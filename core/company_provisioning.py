@@ -44,14 +44,17 @@ No primeiro acesso, altere sua senha e finalize o onboarding.
 """
     )
 
-    with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
-        if smtp_use_tls:
-            server.starttls()
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+            if smtp_use_tls:
+                server.starttls()
 
-        if smtp_username and smtp_password:
-            server.login(smtp_username, smtp_password)
+            if smtp_username and smtp_password:
+                server.login(smtp_username, smtp_password)
 
-        server.send_message(message)
+            server.send_message(message)
+    except Exception as exc:
+        return False, f"Falha ao enviar e-mail: {exc}"
 
     return True, "E-mail enviado com sucesso."
 

@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 
 from core.billing import (
     build_billing_dedupe_key,
@@ -16,6 +17,10 @@ from models import BillingEvent, Company, User
 
 
 PROCESSING_SENTINEL = "__processing__"
+
+
+def should_send_credentials_email():
+    return os.getenv("BILLING_SEND_CREDENTIALS_EMAIL", "true").lower() in {"1", "true", "yes", "on"}
 
 
 def enqueue_pagseguro_payload(payload):
@@ -128,7 +133,7 @@ def process_billing_event(event_id, base_url, include_sensitive=False, force=Fal
             admin_name=data["admin_name"] or "Admin",
             admin_email=data["admin_email"],
             base_url=base_url.rstrip("/"),
-            send_email=False,
+            send_email=should_send_credentials_email(),
         )
     except Exception as exc:
         event.processed = False
@@ -167,6 +172,7 @@ def process_billing_event(event_id, base_url, include_sensitive=False, force=Fal
         "company_slug": result["slug"],
         "login_url": result["login_url"],
         "admin_email": result["admin_email"],
+        "email_result": result.get("email_result"),
         "plan_code": subscription_result["plan_code"],
         "subscription_id": subscription_result["subscription_id"],
     }
