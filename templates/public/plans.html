@@ -3,38 +3,82 @@
 {% block content %}
 <style>
   .public-plans {
-    --appsul-ink: #25272b;
-    --appsul-muted: #667085;
-    --appsul-line: #e7e9ee;
-    --appsul-soft: #f7f8fa;
-    --appsul-accent: #111827;
-    color: var(--appsul-ink);
+    --ink: #17191f;
+    --muted: #5f6673;
+    --line: #e5e8ef;
+    --surface: #ffffff;
+    --soft: #f6f8fb;
+    --soft-2: #eef6f2;
+    --accent: #111827;
+    --accent-2: #1f7a4d;
+    --accent-3: #2563eb;
+    color: var(--ink);
+    font-size: 16px;
   }
 
-  .plans-header,
-  .plans-hero,
-  .checkout-panel,
-  .plan-card,
-  .benefit-card {
-    border: 1px solid var(--appsul-line);
-    border-radius: 8px;
-    background: #fff;
+  .public-plans * {
+    letter-spacing: 0;
+  }
+
+  .plans-shell {
+    max-width: 1180px;
+    margin: 0 auto;
   }
 
   .plans-header {
-    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
   }
 
   .appsul-logo {
-    height: 44px;
     width: auto;
+    height: 44px;
     display: block;
   }
 
+  .plans-header-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .plans-header-actions .btn,
+  .plans-cta {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  .btn-appsul {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .btn-appsul:hover,
+  .btn-appsul:focus {
+    background: #000;
+    border-color: #000;
+    color: #fff;
+  }
+
   .plans-hero {
+    position: relative;
     overflow: hidden;
+    padding: 28px 20px;
+    margin-bottom: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
     background:
-      linear-gradient(120deg, rgba(255,255,255,0.98), rgba(255,255,255,0.86)),
+      linear-gradient(135deg, rgba(255,255,255,0.97), rgba(246,248,251,0.92)),
       url("https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=80");
     background-size: cover;
     background-position: center;
@@ -43,238 +87,563 @@
   .plans-eyebrow {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    border: 1px solid var(--appsul-line);
+    max-width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(31, 122, 77, 0.22);
     border-radius: 999px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--appsul-accent);
-    background: rgba(255, 255, 255, 0.76);
+    background: rgba(238, 246, 242, 0.92);
+    color: #145c39;
+    font-size: 0.92rem;
+    font-weight: 700;
   }
 
   .hero-title {
     max-width: 760px;
-    font-size: clamp(2rem, 4vw, 4.2rem);
-    line-height: 1.02;
-    letter-spacing: 0;
+    margin-bottom: 16px;
+    font-size: 2rem;
+    line-height: 1.08;
+    font-weight: 800;
   }
 
   .hero-copy {
-    max-width: 680px;
-    color: var(--appsul-muted);
-    font-size: 1.08rem;
+    max-width: 720px;
+    margin-bottom: 22px;
+    color: var(--muted);
+    font-size: 1.04rem;
+    line-height: 1.65;
   }
 
-  .hero-metric {
-    border-left: 3px solid var(--appsul-accent);
-    padding-left: 14px;
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
   }
 
-  .plan-card {
-    height: 100%;
-    transition: transform 160ms ease, box-shadow 160ms ease;
+  .trust-strip {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
-  .plan-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  .trust-item,
+  .benefit-card,
+  .plan-card,
+  .checkout-panel,
+  .faq-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
   }
 
-  .plan-price {
-    font-size: 2rem;
-    font-weight: 700;
+  .trust-item {
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.82);
+  }
+
+  .trust-item strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 1rem;
+  }
+
+  .trust-item span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .section-heading {
+    margin-bottom: 18px;
+  }
+
+  .section-heading h2 {
+    margin-bottom: 6px;
+    font-size: 1.7rem;
+    font-weight: 800;
+  }
+
+  .section-heading p {
+    margin-bottom: 0;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
   }
 
   .benefit-card {
-    background: var(--appsul-soft);
+    padding: 18px;
+    background: var(--soft);
+  }
+
+  .benefit-kicker {
+    display: inline-flex;
+    margin-bottom: 10px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #eaf1ff;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .benefit-card strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 1.08rem;
+  }
+
+  .benefit-card p {
+    margin-bottom: 0;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .plans-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 30px;
+  }
+
+  .plan-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 22px;
+    box-shadow: 0 12px 28px rgba(17, 24, 39, 0.06);
+  }
+
+  .plan-card.is-highlighted {
+    border-color: rgba(31, 122, 77, 0.42);
+    box-shadow: 0 18px 40px rgba(31, 122, 77, 0.13);
+  }
+
+  .plan-badge {
+    align-self: flex-start;
+    margin-bottom: 14px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  .plan-card h3 {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    font-weight: 800;
+  }
+
+  .plan-price {
+    margin-bottom: 12px;
+    font-size: 2.1rem;
+    line-height: 1;
+    font-weight: 900;
+  }
+
+  .plan-description {
+    min-height: auto;
+    margin-bottom: 16px;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .plan-features {
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .plan-features li {
+    display: flex;
+    gap: 8px;
+    padding: 7px 0;
+    color: var(--muted);
+    font-size: 0.98rem;
+    border-top: 1px solid #f0f2f6;
+  }
+
+  .plan-features li::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: var(--accent-2);
+  }
+
+  .plan-select-btn {
+    margin-top: auto;
+    min-height: 48px;
   }
 
   .checkout-panel {
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07);
+    padding: 22px;
+    margin-bottom: 28px;
+    background:
+      linear-gradient(180deg, #ffffff, #f8fafc);
+    box-shadow: 0 18px 44px rgba(17, 24, 39, 0.08);
   }
 
-  .btn-appsul {
-    background: var(--appsul-accent);
-    border-color: var(--appsul-accent);
-    color: #fff;
+  .checkout-panel label {
+    font-weight: 700;
+    color: #2f333b;
   }
 
-  .btn-appsul:hover {
-    background: #000;
-    border-color: #000;
-    color: #fff;
+  .checkout-panel .form-control,
+  .checkout-panel .form-select {
+    min-height: 48px;
+    font-size: 1rem;
+    border-radius: 8px;
   }
 
-  @media (max-width: 767.98px) {
+  .checkout-note {
+    padding: 14px;
+    border: 1px solid #dbe7ff;
+    border-radius: 8px;
+    background: #f3f7ff;
+    color: #334155;
+    font-size: 0.98rem;
+    line-height: 1.5;
+  }
+
+  .faq-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .faq-card {
+    padding: 18px;
+    background: #fff;
+  }
+
+  .faq-card strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 1.03rem;
+  }
+
+  .faq-card p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  @media (min-width: 576px) {
     .plans-header {
-      align-items: flex-start !important;
-      gap: 14px;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .plans-header-actions {
-      width: 100%;
+      display: flex;
     }
 
-    .plans-header-actions .btn {
-      width: 100%;
+    .hero-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .trust-strip {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .plans-hero {
+      padding: 44px;
+    }
+
+    .hero-title {
+      font-size: 3rem;
+    }
+
+    .benefits-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .plans-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .faq-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .hero-title {
+      font-size: 4rem;
+    }
+
+    .plans-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .public-plans {
+      font-size: 16px;
+    }
+
+    .appsul-logo {
+      height: 40px;
+    }
+
+    .plans-hero {
+      padding: 24px 16px;
+    }
+
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-copy {
+      font-size: 1rem;
+    }
+
+    .section-heading h2 {
+      font-size: 1.55rem;
+    }
+
+    .plan-card {
+      padding: 20px;
+    }
+
+    .plan-price {
+      font-size: 2.15rem;
+    }
+
+    .checkout-panel {
+      padding: 18px;
     }
   }
 </style>
 
 <div class="public-plans">
-  <header class="plans-header d-flex align-items-center justify-content-between flex-wrap px-3 px-md-4 py-3 mb-4">
-    <a href="https://appsul.com.br" class="d-inline-flex align-items-center text-decoration-none">
-      <img class="appsul-logo" src="{{ url_for('static', filename='img/appsul-logo.jpg') }}" alt="App Sul">
-    </a>
-    <div class="plans-header-actions d-flex gap-2">
-      <a class="btn btn-sm btn-outline-dark" href="https://appsul.com.br" target="_blank" rel="noopener">Site App Sul</a>
-      <a class="btn btn-sm btn-appsul" href="#checkout">Comecar agora</a>
-    </div>
-  </header>
+  <div class="plans-shell">
+    <header class="plans-header">
+      <a href="https://appsul.com.br" class="d-inline-flex align-items-center text-decoration-none">
+        <img class="appsul-logo" src="{{ url_for('static', filename='img/appsul-logo.jpg') }}" alt="App Sul">
+      </a>
+      <div class="plans-header-actions">
+        <a class="btn btn-outline-dark" href="https://appsul.com.br" target="_blank" rel="noopener">Conhecer a App Sul</a>
+        <a class="btn btn-appsul" href="#checkout">Comecar agora</a>
+      </div>
+    </header>
 
-  <section class="plans-hero p-4 p-lg-5 mb-4">
-    <span class="plans-eyebrow mb-4">Automacao para WhatsApp, atendimento e IA</span>
-    <h1 class="hero-title fw-bold mb-3">Venda, atenda e acompanhe clientes em uma central inteligente.</h1>
-    <p class="hero-copy mb-4">
-      A App Sul cria solucoes para automatizar processos. Esta plataforma leva esse mesmo padrao para o WhatsApp:
-      atendimento organizado por equipe, onboarding guiado, historico, IA e painel de operacao.
-    </p>
-    <div class="row g-3 mt-2">
-      <div class="col-md-4">
-        <div class="hero-metric">
-          <strong>Ativacao rapida</strong>
-          <div class="text-muted small">Checkout, pagamento e criacao do acesso em poucos passos.</div>
+    <section class="plans-hero">
+      <span class="plans-eyebrow">Plataforma SaaS para atendimento no WhatsApp</span>
+      <h1 class="hero-title">Transforme seu WhatsApp em uma central de atendimento profissional.</h1>
+      <p class="hero-copy">
+        Organize conversas, reduza atrasos e acompanhe sua operacao em tempo real com setores,
+        multiatendentes, dashboard, SLA e IA para apoiar a classificacao dos atendimentos.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-appsul plans-cta" href="#checkout">Ativar meu atendimento</a>
+        <a class="btn btn-outline-dark plans-cta" href="#planos">Ver planos</a>
+      </div>
+      <div class="trust-strip">
+        <div class="trust-item">
+          <strong>Pagamento seguro</strong>
+          <span>Checkout integrado ao PagBank.</span>
+        </div>
+        <div class="trust-item">
+          <strong>Acesso guiado</strong>
+          <span>Credenciais e onboarding apos a aprovacao.</span>
+        </div>
+        <div class="trust-item">
+          <strong>Operacao em tempo real</strong>
+          <span>Painel para equipe, historico e acompanhamento.</span>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="hero-metric">
-          <strong>WhatsApp centralizado</strong>
-          <div class="text-muted small">Conversas, setores, anexos e usuarios em um unico painel.</div>
+    </section>
+
+    <section class="mb-4">
+      <div class="section-heading">
+        <h2>Feito para empresas que vivem atendimento todos os dias</h2>
+        <p>Uma experiencia pensada para vender, atender e gerir a operacao sem depender de planilhas soltas.</p>
+      </div>
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <span class="benefit-kicker">WhatsApp</span>
+          <strong>Atendimento organizado por setores</strong>
+          <p>Direcione conversas para a equipe certa e mantenha o contexto do cliente sempre acessivel.</p>
+        </div>
+        <div class="benefit-card">
+          <span class="benefit-kicker">Tempo real</span>
+          <strong>Multiatendentes com dashboard</strong>
+          <p>Acompanhe usuarios, conversas, mensagens e indicadores em uma central profissional.</p>
+        </div>
+        <div class="benefit-card">
+          <span class="benefit-kicker">IA e SLA</span>
+          <strong>Mais controle para crescer</strong>
+          <p>Use IA como apoio na classificacao e controle SLA para reduzir atrasos no atendimento.</p>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="hero-metric">
-          <strong>IA como apoio</strong>
-          <div class="text-muted small">Classificacao, sugestoes e consulta a documentos da empresa.</div>
+    </section>
+
+    <section id="planos" class="mb-4">
+      <div class="section-heading d-md-flex align-items-end justify-content-between gap-3">
+        <div>
+          <h2>Escolha o plano ideal</h2>
+          <p>Comece com o formato que combina com a sua operacao. Voce pode ativar agora pelo checkout.</p>
         </div>
+        <a class="btn btn-outline-dark plans-cta mt-3 mt-md-0" href="#checkout">Ir para checkout</a>
       </div>
-    </div>
-  </section>
 
-  <section class="row g-3 mb-4">
-    <div class="col-md-4">
-      <div class="benefit-card p-3 h-100">
-        <strong>Organize sua equipe</strong>
-        <p class="text-muted small mb-0">Distribua atendimentos por setor e acompanhe conversas sem perder contexto.</p>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="benefit-card p-3 h-100">
-        <strong>Automatize o inicio</strong>
-        <p class="text-muted small mb-0">Acesso, senha temporaria e onboarding do cliente saem do fluxo manual.</p>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="benefit-card p-3 h-100">
-        <strong>Acompanhe resultado</strong>
-        <p class="text-muted small mb-0">Painel Ops com clientes, pagamentos, validade do plano e consumo operacional.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="mb-4">
-    <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3">
-      <div>
-        <h2 class="h3 mb-1">Escolha seu plano</h2>
-        <p class="text-muted mb-0">Comece com o modelo que combina com sua operacao.</p>
-      </div>
-      <a class="btn btn-outline-dark" href="#checkout">Ir para checkout</a>
-    </div>
-
-    <div class="row g-4">
-      {% for plan in plans %}
-      <div class="col-lg-3 col-md-6">
-        <div class="plan-card p-3">
+      <div class="plans-grid">
+        {% for plan in plans %}
+        <article class="plan-card {% if plan.highlight_text or loop.index == 2 %}is-highlighted{% endif %}">
           {% if plan.highlight_text %}
-          <span class="badge text-bg-dark mb-3">{{ plan.highlight_text }}</span>
+          <span class="plan-badge">{{ plan.highlight_text }}</span>
+          {% elif loop.index == 2 %}
+          <span class="plan-badge">Recomendado</span>
           {% endif %}
-          <h3 class="h5 mb-2">{{ plan.name }}</h3>
-          <div class="plan-price mb-2">{{ plan.price_display }}</div>
-          <p class="text-muted small">{{ plan.description }}</p>
-          <ul class="small text-muted ps-3 mb-0">
+          <h3>{{ plan.name }}</h3>
+          <div class="plan-price">{{ plan.price_display }}</div>
+          <p class="plan-description">{{ plan.description }}</p>
+          <ul class="plan-features">
             <li>Periodo: {{ plan.billing_period }}</li>
-            <li>Parcelamento: ate {{ plan.max_installments }}x</li>
-            <li>PIX: {{ "sim" if plan.allow_pix else "nao" }}</li>
-            <li>Boleto: {{ "sim" if plan.allow_boleto else "nao" }}</li>
+            <li>Parcelamento em ate {{ plan.max_installments }}x</li>
+            <li>PIX {{ "disponivel" if plan.allow_pix else "indisponivel" }}</li>
+            <li>Boleto {{ "disponivel" if plan.allow_boleto else "indisponivel" }}</li>
           </ul>
+          <button
+            class="btn btn-appsul plan-select-btn"
+            type="button"
+            data-plan-code="{{ plan.code }}"
+          >
+            Escolher este plano
+          </button>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="checkout" class="checkout-panel">
+      <div class="row g-4 align-items-start">
+        <div class="col-lg-4">
+          <h2 class="h3 fw-bold mb-2">Comece sua contratacao</h2>
+          <p class="text-muted mb-3">
+            Preencha os dados da empresa e siga para o pagamento. O e-mail informado sera usado para o acesso inicial.
+          </p>
+          <div class="checkout-note">
+            Se voce recebeu um cupom de teste, informe no campo Cupom antes de continuar.
+          </div>
+        </div>
+        <div class="col-lg-8">
+          <form method="POST" action="{{ url_for('commercial.start_checkout') }}" class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Plano</label>
+              <select class="form-select" name="plan_code" id="plan_code" required>
+                <option value="">Selecione</option>
+                {% for plan in plans %}
+                <option value="{{ plan.code }}">{{ plan.name }} - {{ plan.price_display }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Empresa</label>
+              <input class="form-control" type="text" name="company_name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Responsavel</label>
+              <input class="form-control" type="text" name="admin_name" value="Admin">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">E-mail de acesso</label>
+              <input class="form-control" type="email" name="admin_email" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Documento</label>
+              <input class="form-control" type="text" name="customer_document" placeholder="CPF ou CNPJ">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Pagamento</label>
+              <select class="form-select" name="payment_method">
+                <option value="card">Cartao</option>
+                <option value="pix">PIX</option>
+                <option value="boleto">Boleto</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Parcelas</label>
+              <select class="form-select" name="installment_count">
+                {% for item in range(1, 13) %}
+                <option value="{{ item }}">{{ item }}x</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Cupom</label>
+              <input class="form-control" type="text" name="coupon_code">
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <button class="btn btn-appsul plans-cta w-100">Continuar para pagamento</button>
+            </div>
+          </form>
         </div>
       </div>
-      {% endfor %}
-    </div>
-  </section>
+    </section>
 
-  <section id="checkout" class="checkout-panel p-3 p-md-4 mb-4">
-    <div class="row g-4 align-items-start">
-      <div class="col-lg-4">
-        <h2 class="h4 mb-2">Iniciar contratacao</h2>
-        <p class="text-muted mb-0">
-          Preencha os dados da empresa e escolha a forma de pagamento. O e-mail informado sera usado para o acesso inicial.
-        </p>
+    <section class="mb-2">
+      <div class="section-heading">
+        <h2>Dúvidas rápidas</h2>
+        <p>Alguns pontos importantes antes de ativar sua central.</p>
       </div>
-      <div class="col-lg-8">
-        <form method="POST" action="{{ url_for('commercial.start_checkout') }}" class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Plano</label>
-            <select class="form-select" name="plan_code" required>
-              <option value="">Selecione</option>
-              {% for plan in plans %}
-              <option value="{{ plan.code }}">{{ plan.name }} - {{ plan.price_display }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Empresa</label>
-            <input class="form-control" type="text" name="company_name" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Responsavel</label>
-            <input class="form-control" type="text" name="admin_name" value="Admin">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">E-mail de acesso</label>
-            <input class="form-control" type="email" name="admin_email" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Documento</label>
-            <input class="form-control" type="text" name="customer_document" placeholder="CPF ou CNPJ">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Pagamento</label>
-            <select class="form-select" name="payment_method">
-              <option value="card">Cartao</option>
-              <option value="pix">PIX</option>
-              <option value="boleto">Boleto</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Parcelas</label>
-            <select class="form-select" name="installment_count">
-              {% for item in range(1, 13) %}
-              <option value="{{ item }}">{{ item }}x</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Cupom</label>
-            <input class="form-control" type="text" name="coupon_code">
-          </div>
-          <div class="col-md-6 d-flex align-items-end">
-            <button class="btn btn-appsul w-100">Continuar para pagamento</button>
-          </div>
-        </form>
+      <div class="faq-grid">
+        <div class="faq-card">
+          <strong>Como recebo meu acesso?</strong>
+          <p>Apos a aprovacao do pagamento, o sistema prepara a empresa e envia as credenciais para o e-mail informado.</p>
+        </div>
+        <div class="faq-card">
+          <strong>O pagamento é seguro?</strong>
+          <p>Sim. O pagamento e realizado pelo checkout do PagBank, mantendo a etapa financeira fora da plataforma.</p>
+        </div>
+        <div class="faq-card">
+          <strong>Posso testar?</strong>
+          <p>Se voce recebeu um cupom comercial de teste, informe no checkout para ativar o periodo promocional.</p>
+        </div>
+        <div class="faq-card">
+          <strong>O Pix sandbox funciona em banco real?</strong>
+          <p>Em ambiente sandbox, o QR Code pode ser apenas de simulacao. Em producao, o Pix usa o fluxo real do PagBank.</p>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 </div>
+
+<script>
+  document.querySelectorAll("[data-plan-code]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var select = document.getElementById("plan_code");
+      if (select) {
+        select.value = button.getAttribute("data-plan-code") || "";
+      }
+      var checkout = document.getElementById("checkout");
+      if (checkout) {
+        checkout.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+</script>
 {% endblock %}
