@@ -14,6 +14,13 @@
     --accent-3: #2563eb;
     color: var(--ink);
     font-size: 16px;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .public-plans,
+  .public-plans * {
+    box-sizing: border-box;
   }
 
   .public-plans * {
@@ -21,7 +28,7 @@
   }
 
   .plans-shell {
-    max-width: 1180px;
+    width: min(100%, 1180px);
     margin: 0 auto;
   }
 
@@ -34,6 +41,7 @@
     border: 1px solid var(--line);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.96);
+    width: 100%;
   }
 
   .appsul-logo {
@@ -82,6 +90,7 @@
       url("https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=80");
     background-size: cover;
     background-position: center;
+    width: 100%;
   }
 
   .plans-eyebrow {
@@ -96,6 +105,7 @@
     color: #145c39;
     font-size: 0.92rem;
     font-weight: 700;
+    white-space: normal;
   }
 
   .hero-title {
@@ -223,6 +233,8 @@
     min-height: 100%;
     padding: 22px;
     box-shadow: 0 12px 28px rgba(17, 24, 39, 0.06);
+    width: 100%;
+    min-width: 0;
   }
 
   .plan-card.is-highlighted {
@@ -310,6 +322,7 @@
     min-height: 48px;
     font-size: 1rem;
     border-radius: 8px;
+    width: 100%;
   }
 
   .checkout-note {
@@ -413,7 +426,7 @@
     }
 
     .hero-title {
-      font-size: 2rem;
+      font-size: 1.9rem;
     }
 
     .hero-copy {
@@ -434,6 +447,20 @@
 
     .checkout-panel {
       padding: 18px;
+    }
+
+    .plans-header-actions,
+    .hero-actions {
+      width: 100%;
+    }
+
+    .plans-header-actions .btn,
+    .hero-actions .btn,
+    .plan-select-btn,
+    .plans-cta {
+      width: 100%;
+      min-height: 50px;
+      font-size: 1rem;
     }
   }
 </style>
