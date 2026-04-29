@@ -49,14 +49,14 @@ def start_checkout():
             payment_method=payment_method,
             installment_count=installment_count,
             coupon_code=coupon_code,
-            success_url=url_for("commercial.checkout_status", public_token="__token__", _external=True),
+            success_url=url_for("commercial.checkout_success", public_token="__token__", _external=True),
             cancel_url=url_for("commercial.plans", _external=True),
         )
     except ValueError as exc:
         flash(str(exc), "warning")
         return redirect(url_for("commercial.plans"))
 
-    session.success_url = url_for("commercial.checkout_status", public_token=session.public_token, _external=True)
+    session.success_url = url_for("commercial.checkout_success", public_token=session.public_token, _external=True)
     session.metadata_json = {
         **(session.metadata_json or {}),
         "success_url": session.success_url,
@@ -73,6 +73,8 @@ def checkout_status(public_token):
     session = get_checkout_session_by_token(public_token)
     if not session:
         return "Checkout nao encontrado", 404
+    if session.status == "paid":
+        return redirect(url_for("commercial.checkout_success", public_token=session.public_token))
 
     metadata_json = session.metadata_json or {}
     checkout_payload = {
@@ -97,6 +99,32 @@ def checkout_status(public_token):
     )
 
 
+@commercial_bp.route("/checkout/<public_token>/success")
+def checkout_success(public_token):
+    session = get_checkout_session_by_token(public_token)
+    if not session:
+        return "Checkout nao encontrado", 404
+
+    training_url = (
+        os.getenv("CUSTOMER_TRAINING_URL")
+        or os.getenv("APPSUL_TRAINING_URL")
+        or "https://appsul.com.br"
+    ).strip()
+
+    login_url = None
+    if session.company and session.company.slug:
+        platform_base_url = (os.getenv("PLATFORM_BASE_URL") or request.host_url).rstrip("/")
+        login_url = f"{platform_base_url}/{session.company.slug}/login"
+
+    return render_template(
+        "public/checkout_success.html",
+        session=session,
+        plan=session.plan,
+        training_url=training_url,
+        login_url=login_url,
+    )
+
+
 @commercial_bp.route("/checkout/<public_token>/pay", methods=["POST"])
 def redirect_to_provider_checkout(public_token):
     session = get_checkout_session_by_token(public_token)
@@ -110,7 +138,7 @@ def redirect_to_provider_checkout(public_token):
     platform_base_url = (os.getenv("PLATFORM_BASE_URL") or request.host_url).rstrip("/")
     is_public_base_url = platform_base_url.startswith("https://") and "localhost" not in platform_base_url and "127.0.0.1" not in platform_base_url
     webhook_url = f"{platform_base_url}/webhooks/pagseguro" if is_public_base_url else None
-    return_url = url_for("commercial.checkout_status", public_token=session.public_token, _external=True) if is_public_base_url else None
+    return_url = url_for("commercial.checkout_success", public_token=session.public_token, _external=True) if is_public_base_url else None
 
     try:
         provider_checkout = create_pagbank_checkout(

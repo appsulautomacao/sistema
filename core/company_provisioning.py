@@ -15,6 +15,14 @@ def generate_temporary_password(length=14):
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
+def get_customer_training_url():
+    return (
+        os.getenv("CUSTOMER_TRAINING_URL")
+        or os.getenv("APPSUL_TRAINING_URL")
+        or "https://appsul.com.br"
+    ).strip()
+
+
 def send_credentials_email(admin_email, admin_name, company_name, login_url, password):
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
@@ -22,6 +30,7 @@ def send_credentials_email(admin_email, admin_name, company_name, login_url, pas
     smtp_password = os.getenv("SMTP_PASSWORD")
     smtp_from = os.getenv("SMTP_FROM")
     smtp_use_tls = os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes", "on"}
+    training_url = get_customer_training_url()
 
     if not smtp_host or not smtp_from:
         return False, "SMTP nao configurado (defina SMTP_HOST e SMTP_FROM)."
@@ -33,14 +42,26 @@ def send_credentials_email(admin_email, admin_name, company_name, login_url, pas
     message.set_content(
         f"""Ola {admin_name},
 
-Seu acesso administrativo foi criado.
+Seja bem-vindo(a) a plataforma de atendimento da App Sul.
+
+Seu acesso administrativo foi criado e ja esta pronto para o primeiro login.
 
 Empresa: {company_name}
 Usuario: {admin_email}
 Senha temporaria: {password}
 Link de acesso: {login_url}
 
-No primeiro acesso, altere sua senha e finalize o onboarding.
+Primeiros passos:
+1. Acesse o link acima usando seu e-mail e a senha temporaria.
+2. No primeiro acesso, crie uma nova senha.
+3. Finalize o onboarding da empresa.
+4. Conecte o WhatsApp pelo painel.
+5. Cadastre usuarios e setores para organizar o atendimento.
+
+Treinamento e orientacoes:
+{training_url}
+
+Se tiver qualquer dificuldade, responda este e-mail ou fale com a equipe App Sul.
 """
     )
 

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .checkout-success {
+    --ink: #17191f;
+    --muted: #5f6673;
+    --line: #e5e8ef;
+    --surface: #ffffff;
+    --soft: #f6f8fb;
+    --success: #1f7a4d;
+    --accent: #111827;
+    color: var(--ink);
+    font-size: 16px;
+  }
+
+  .checkout-success * {
+    box-sizing: border-box;
+    letter-spacing: 0;
+  }
+
+  .success-shell {
+    width: min(100%, 980px);
+    margin: 0 auto;
+  }
+
+  .success-hero {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background:
+      linear-gradient(135deg, rgba(31, 122, 77, 0.10), rgba(37, 99, 235, 0.08)),
+      var(--surface);
+    padding: clamp(24px, 6vw, 54px);
+    box-shadow: 0 20px 55px rgba(17, 24, 39, 0.08);
+  }
+
+  .success-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: rgba(31, 122, 77, 0.12);
+    color: var(--success);
+    font-size: 0.9rem;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+
+  .success-title {
+    max-width: 760px;
+    font-size: clamp(2rem, 7vw, 3.4rem);
+    line-height: 1.04;
+    font-weight: 900;
+    margin: 0 0 14px;
+  }
+
+  .success-copy {
+    max-width: 680px;
+    color: var(--muted);
+    font-size: clamp(1rem, 3.8vw, 1.2rem);
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .success-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 22px;
+  }
+
+  .success-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 18px;
+  }
+
+  .success-card strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .success-card span,
+  .success-card a {
+    color: var(--ink);
+    font-size: 1.02rem;
+    font-weight: 800;
+    word-break: break-word;
+  }
+
+  .success-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .success-actions .btn {
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+  }
+
+  .success-next {
+    margin-top: 18px;
+    border-radius: 10px;
+    background: var(--soft);
+    padding: 18px;
+  }
+
+  .success-next h2 {
+    font-size: 1.1rem;
+    font-weight: 900;
+    margin: 0 0 10px;
+  }
+
+  .success-next ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  @media (min-width: 720px) {
+    .success-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .success-actions {
+      grid-template-columns: repeat(2, max-content);
+    }
+  }
+</style>
+
+{% set is_paid = session.status == "paid" %}
+
+<section class="checkout-success">
+  <div class="success-shell">
+    <div class="success-hero">
+      <div class="success-badge">
+        {% if is_paid %}
+        Pagamento aprovado
+        {% else %}
+        Confirmacao em andamento
+        {% endif %}
+      </div>
+
+      {% if is_paid %}
+      <h1 class="success-title">Bem-vindo a App Sul. Seu acesso esta sendo enviado por e-mail.</h1>
+      <p class="success-copy">
+        Recebemos a confirmacao do pagamento e preparamos o acesso administrativo da sua empresa.
+        Enviamos as credenciais iniciais para <strong>{{ session.admin_email }}</strong>.
+      </p>
+      {% else %}
+      <h1 class="success-title">Recebemos seu retorno do pagamento.</h1>
+      <p class="success-copy">
+        O PagBank ainda pode levar alguns instantes para confirmar a aprovacao. Assim que a confirmacao chegar,
+        criaremos sua empresa automaticamente e enviaremos as credenciais para <strong>{{ session.admin_email }}</strong>.
+      </p>
+      {% endif %}
+
+      <div class="success-grid">
+        <div class="success-card">
+          <strong>Empresa</strong>
+          <span>{{ session.company_name }}</span>
+        </div>
+        <div class="success-card">
+          <strong>Plano</strong>
+          <span>{{ plan.name }}</span>
+        </div>
+        <div class="success-card">
+          <strong>Valor</strong>
+          <span>{{ session.amount_display }}</span>
+        </div>
+      </div>
+
+      <div class="success-actions">
+        {% if login_url %}
+        <a class="btn btn-dark" href="{{ login_url }}">Acessar minha central</a>
+        {% else %}
+        <a class="btn btn-dark disabled" aria-disabled="true" href="#">Acesso liberado apos confirmacao</a>
+        {% endif %}
+        <a class="btn btn-outline-dark" href="{{ training_url }}" target="_blank" rel="noopener">Ver treinamento</a>
+      </div>
+
+      <div class="success-next">
+        <h2>Proximos passos</h2>
+        <ol>
+          <li>Confira a caixa de entrada e o spam do e-mail informado na compra.</li>
+          <li>Use a senha temporaria no primeiro acesso e crie uma nova senha.</li>
+          <li>Finalize o onboarding, conecte o WhatsApp e cadastre setores e atendentes.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
