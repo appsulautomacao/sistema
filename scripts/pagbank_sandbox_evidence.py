@@ -1,11 +1,16 @@
 import argparse
 import json
 import os
+import sys
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from application import create_app
 from core.commercial_service import create_checkout_session, ensure_default_billing_plans
