@@ -9,6 +9,7 @@ import requests
 
 
 SANDBOX_BASE_URL = "https://sandbox.api.pagseguro.com"
+BR_TIMEZONE = timezone(timedelta(hours=-3))
 
 
 def _now():
@@ -33,13 +34,13 @@ def _sandbox_config():
 
 def _checkout_payload(platform_base_url, amount_cents):
     timestamp = _now().strftime("%Y%m%d%H%M%S")
-    reference_id = f"appsul-hml-checkout-{timestamp}-{secrets.token_hex(3)}"
-    expires_at = (_now() + timedelta(hours=24)).isoformat()
+    reference_id = f"apphml{timestamp}{secrets.token_hex(2)}"
+    expires_at = (_now() + timedelta(hours=24)).astimezone(BR_TIMEZONE).replace(microsecond=0).isoformat()
 
     return {
         "customer": {
             "name": "Homologacao PagBank Appsul",
-            "email": f"homologacao+{reference_id}@appsul.com.br",
+            "email": f"hml{timestamp[-6:]}@appsul.com.br",
             "tax_id": "52998224725",
         },
         "reference_id": reference_id,
