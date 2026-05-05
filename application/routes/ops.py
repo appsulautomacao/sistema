@@ -13,7 +13,7 @@ from core.company_provisioning import (
     provision_company_with_admin,
     send_credentials_email,
 )
-from core.super_admin import is_super_admin_user
+from core.super_admin import get_super_admin_emails, is_super_admin_user
 from db import db
 from models import (
     BillingEvent,
@@ -21,12 +21,19 @@ from models import (
     AILog,
     Company,
     CompanySettings,
+    ConversationHistory,
+    ConversationRouting,
     Conversation,
     Message,
     MessageAttachment,
+    Notification,
     PaymentTransaction,
+    Sector,
+    SLAEvent,
     Subscription,
     User,
+    UserPresence,
+    WhatsAppInstance,
 )
 
 
@@ -59,6 +66,92 @@ def _format_bytes(size_bytes):
         if value < 1024 or unit == "GB":
             return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} B"
         value /= 1024
+
+
+def _is_protected_company(company):
+    if (company.slug or "").strip().lower() == "appsul":
+        return True
+
+    super_admin_emails = get_super_admin_emails()
+    if not super_admin_emails:
+        return False
+
+    return User.query.filter(
+        User.company_id == company.id,
+        func.lower(User.email).in_(sorted(super_admin_emails)),
+    ).first() is not None
+
+
+def _delete_company_data(company):
+    conversation_ids = [
+        item[0] for item in db.session.query(Conversation.id)
+        .filter(Conversation.company_id == company.id)
+        .all()
+    ]
+    user_ids = [
+        item[0] for item in db.session.query(User.id)
+        .filter(User.company_id == company.id)
+        .all()
+    ]
+    checkout_session_ids = [
+        item[0] for item in db.session.query(CheckoutSession.id)
+        .filter(CheckoutSession.company_id == company.id)
+        .all()
+    ]
+    subscription_ids = [
+        item[0] for item in db.session.query(Subscription.id)
+        .filter(Subscription.company_id == company.id)
+        .all()
+    ]
+    billing_event_ids = {
+        item[0] for item in db.session.query(BillingEvent.id)
+        .filter(BillingEvent.company_id == company.id)
+        .all()
+    }
+    if checkout_session_ids:
+        billing_event_ids.update(
+            item[0] for item in db.session.query(BillingEvent.id)
+            .filter(BillingEvent.checkout_session_id.in_(checkout_session_ids))
+            .all()
+        )
+
+    MessageAttachment.query.filter(MessageAttachment.company_id == company.id).delete(synchronize_session=False)
+    if conversation_ids:
+        MessageAttachment.query.filter(MessageAttachment.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+        Message.query.filter(Message.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+        SLAEvent.query.filter(SLAEvent.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+        Notification.query.filter(Notification.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+        ConversationHistory.query.filter(ConversationHistory.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+        ConversationRouting.query.filter(ConversationRouting.conversation_id.in_(conversation_ids)).delete(synchronize_session=False)
+
+    Message.query.filter(Message.company_id == company.id).delete(synchronize_session=False)
+    ConversationRouting.query.filter(ConversationRouting.company_id == company.id).delete(synchronize_session=False)
+    ConversationHistory.query.filter(ConversationHistory.company_id == company.id).delete(synchronize_session=False)
+    Conversation.query.filter(Conversation.company_id == company.id).delete(synchronize_session=False)
+
+    UserPresence.query.filter(UserPresence.company_id == company.id).delete(synchronize_session=False)
+    AILog.query.filter(AILog.company_id == company.id).delete(synchronize_session=False)
+    WhatsAppInstance.query.filter(WhatsAppInstance.company_id == company.id).delete(synchronize_session=False)
+
+    if billing_event_ids:
+        PaymentTransaction.query.filter(PaymentTransaction.billing_event_id.in_(billing_event_ids)).delete(synchronize_session=False)
+    if subscription_ids:
+        PaymentTransaction.query.filter(PaymentTransaction.subscription_id.in_(subscription_ids)).delete(synchronize_session=False)
+    if checkout_session_ids:
+        PaymentTransaction.query.filter(PaymentTransaction.checkout_session_id.in_(checkout_session_ids)).delete(synchronize_session=False)
+
+    PaymentTransaction.query.filter(PaymentTransaction.company_id == company.id).delete(synchronize_session=False)
+    Subscription.query.filter(Subscription.company_id == company.id).delete(synchronize_session=False)
+    if billing_event_ids:
+        BillingEvent.query.filter(BillingEvent.id.in_(billing_event_ids)).delete(synchronize_session=False)
+    CheckoutSession.query.filter(CheckoutSession.company_id == company.id).delete(synchronize_session=False)
+
+    if user_ids:
+        UserPresence.query.filter(UserPresence.user_id.in_(user_ids)).delete(synchronize_session=False)
+    User.query.filter(User.company_id == company.id).delete(synchronize_session=False)
+    Sector.query.filter(Sector.company_id == company.id).delete(synchronize_session=False)
+    CompanySettings.query.filter(CompanySettings.company_id == company.id).delete(synchronize_session=False)
+    db.session.delete(company)
 
 
 @ops_bp.route("/")
@@ -121,6 +214,7 @@ def clients():
             "ai_fallback_count": ai_fallback_count,
             "attachments_bytes": int(attachments_bytes),
             "attachments_display": _format_bytes(attachments_bytes),
+            "is_protected": _is_protected_company(company),
         })
 
     latest_provision = session.pop("ops_latest_provision", None)
@@ -335,6 +429,25 @@ def activate_client(company_id):
     settings.plan = "active"
     db.session.commit()
     flash(f"Cliente {company.name} ativado.", "success")
+    return redirect(url_for("ops.clients"))
+
+
+@ops_bp.route("/clients/<int:company_id>/delete", methods=["POST"])
+@login_required
+def delete_client(company_id):
+    denied = _require_super_admin()
+    if denied:
+        return denied
+
+    company = Company.query.get_or_404(company_id)
+    if _is_protected_company(company):
+        flash("Este cliente esta protegido e nao pode ser excluido pelo Ops.", "warning")
+        return redirect(url_for("ops.clients"))
+
+    company_name = company.name
+    _delete_company_data(company)
+    db.session.commit()
+    flash(f"Cliente {company_name} excluido com sucesso.", "success")
     return redirect(url_for("ops.clients"))
 
 

@@ -64,50 +64,50 @@ def apply_checkout_coupon(coupon_code, original_amount_cents):
 DEFAULT_BILLING_PLANS = [
     {
         "code": "starter-monthly",
-        "name": "Starter Mensal",
-        "description": "Entrada rapida para operar com atendimento e onboarding simples.",
+        "name": "Essencial Mensal",
+        "description": "Para pequenas empresas que querem sair da bagunca do WhatsApp e comecar com atendimento organizado.",
         "billing_period": "monthly",
         "billing_cycle_months": 1,
         "price_cents": 19900,
         "max_installments": 12,
-        "highlight_text": "Comeco rapido",
+        "highlight_text": None,
         "sort_order": 10,
-        "metadata_json": {"users_label": "ate 3 usuarios", "channel": "whatsapp"},
+        "metadata_json": {"users_label": "ate 2 atendentes", "channel": "whatsapp"},
     },
     {
         "code": "pro-monthly",
-        "name": "Pro Mensal",
-        "description": "Plano principal para operar todos os dias com equipe e IA.",
+        "name": "Profissional Mensal",
+        "description": "Ideal para empresas que atendem todos os dias, tem equipe e precisam controlar conversas, setores e tempo de resposta.",
         "billing_period": "monthly",
         "billing_cycle_months": 1,
         "price_cents": 34900,
         "max_installments": 12,
         "highlight_text": "Mais vendido",
         "sort_order": 20,
-        "metadata_json": {"users_label": "ate 10 usuarios", "channel": "whatsapp"},
+        "metadata_json": {"users_label": "ate 5 atendentes", "channel": "whatsapp"},
     },
     {
         "code": "pro-yearly",
-        "name": "Pro Anual",
-        "description": "Pagamento anual com economia e ativacao imediata.",
+        "name": "Profissional Anual",
+        "description": "Para empresas que querem reduzir custo, garantir a operacao anual e receber implantacao assistida com melhores condicoes.",
         "billing_period": "yearly",
         "billing_cycle_months": 12,
         "price_cents": 349000,
         "max_installments": 12,
-        "highlight_text": "Melhor custo anual",
+        "highlight_text": "Economia anual",
         "sort_order": 30,
-        "metadata_json": {"users_label": "ate 10 usuarios", "channel": "whatsapp"},
+        "metadata_json": {"users_label": "ate 5 atendentes", "channel": "whatsapp"},
     },
     {
         "code": "implantacao-avista",
-        "name": "Implantacao a Vista",
-        "description": "Pagamento unico para setup inicial ou fee comercial.",
+        "name": "Implantacao Assistida",
+        "description": "Configuracao inicial da central, conexao do WhatsApp, criacao dos setores e orientacao para sua equipe comecar do jeito certo.",
         "billing_period": "one_time",
         "billing_cycle_months": 0,
         "price_cents": 99000,
-        "max_installments": 1,
+        "max_installments": 12,
         "allow_boleto": True,
-        "highlight_text": "Pagamento unico",
+        "highlight_text": None,
         "sort_order": 40,
         "metadata_json": {"users_label": "setup comercial"},
     },
@@ -123,6 +123,24 @@ def ensure_default_billing_plans():
 
     for raw_plan in DEFAULT_BILLING_PLANS:
         if raw_plan["code"] in existing_codes:
+            plan = BillingPlan.query.filter_by(code=raw_plan["code"]).first()
+            changed = False
+            for field in (
+                "name",
+                "description",
+                "billing_period",
+                "billing_cycle_months",
+                "price_cents",
+                "max_installments",
+                "highlight_text",
+                "sort_order",
+                "metadata_json",
+            ):
+                if getattr(plan, field) != raw_plan.get(field):
+                    setattr(plan, field, raw_plan.get(field))
+                    changed = True
+            if changed:
+                created = True
             continue
         db.session.add(BillingPlan(**raw_plan))
         created = True

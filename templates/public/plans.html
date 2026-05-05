@@ -260,10 +260,32 @@
   }
 
   .plan-price {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     font-size: 2.1rem;
     line-height: 1;
     font-weight: 900;
+  }
+
+  .plan-price small {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .plan-price-note {
+    margin-bottom: 6px;
+    color: #1f7a4d;
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .plan-savings {
+    margin-bottom: 12px;
+    color: #8a4b0b;
+    font-size: 0.94rem;
+    font-weight: 800;
+    line-height: 1.35;
   }
 
   .plan-description {
@@ -302,6 +324,35 @@
   .plan-select-btn {
     margin-top: auto;
     min-height: 48px;
+  }
+
+  .final-cta-panel {
+    display: grid;
+    gap: 18px;
+    align-items: center;
+    padding: 24px;
+    margin-bottom: 28px;
+    border: 1px solid #dbe7ff;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ffffff, #f3f7ff);
+  }
+
+  .final-cta-panel h2 {
+    margin-bottom: 8px;
+    font-size: 1.55rem;
+    font-weight: 850;
+  }
+
+  .final-cta-panel p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.02rem;
+    line-height: 1.55;
+  }
+
+  .final-cta-actions {
+    display: grid;
+    gap: 10px;
   }
 
   .checkout-panel {
@@ -400,6 +451,16 @@
     .faq-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .final-cta-panel {
+      grid-template-columns: 1fr auto;
+      padding: 28px;
+    }
+
+    .final-cta-actions {
+      display: flex;
+      align-items: center;
+    }
   }
 
   @media (min-width: 1200px) {
@@ -445,6 +506,11 @@
       font-size: 2.15rem;
     }
 
+    .plan-features li {
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
     .checkout-panel {
       padding: 18px;
     }
@@ -461,6 +527,10 @@
       width: 100%;
       min-height: 50px;
       font-size: 1rem;
+    }
+
+    .final-cta-panel {
+      padding: 20px;
     }
   }
 </style>
@@ -531,38 +601,99 @@
     <section id="planos" class="mb-4">
       <div class="section-heading d-md-flex align-items-end justify-content-between gap-3">
         <div>
-          <h2>Escolha o plano ideal</h2>
-          <p>Comece com o formato que combina com a sua operacao. Voce pode ativar agora pelo checkout.</p>
+          <h2>Escolha o plano ideal para organizar seu atendimento</h2>
+          <p>Comece com uma central profissional para WhatsApp, distribua conversas por setor, acompanhe sua equipe e reduza atrasos no atendimento. Voce pode ativar agora pelo checkout seguro.</p>
         </div>
         <a class="btn btn-outline-dark plans-cta mt-3 mt-md-0" href="#checkout">Ir para checkout</a>
       </div>
 
       <div class="plans-grid">
         {% for plan in plans %}
-        <article class="plan-card {% if plan.highlight_text or loop.index == 2 %}is-highlighted{% endif %}">
-          {% if plan.highlight_text %}
-          <span class="plan-badge">{{ plan.highlight_text }}</span>
-          {% elif loop.index == 2 %}
-          <span class="plan-badge">Recomendado</span>
+        {% if plan.code == "starter-monthly" %}
+          {% set display_name = "Essencial Mensal" %}
+          {% set display_description = "Para pequenas empresas que querem sair da bagunca do WhatsApp e comecar com atendimento organizado." %}
+          {% set display_features = ["Cobranca mensal", "1 WhatsApp conectado", "Ate 2 atendentes", "Central de conversas", "Historico de atendimento", "Setores basicos", "PIX disponivel", "Cartao em ate 12x", "Ativacao rapida"] %}
+          {% set display_button = "Comecar agora" %}
+          {% set display_badge = none %}
+          {% set monthly_note = none %}
+          {% set savings_note = none %}
+          {% set price_suffix = "/mes" %}
+        {% elif plan.code == "pro-monthly" %}
+          {% set display_name = "Profissional Mensal" %}
+          {% set display_description = "Ideal para empresas que atendem todos os dias, tem equipe e precisam controlar conversas, setores e tempo de resposta." %}
+          {% set display_features = ["Cobranca mensal", "1 WhatsApp conectado", "Ate 5 atendentes", "Setores ilimitados", "Dashboard de atendimento", "Controle de SLA", "Historico completo", "Apoio com IA na classificacao", "PIX disponivel", "Cartao em ate 12x", "Suporte prioritario"] %}
+          {% set display_button = "Escolher Profissional" %}
+          {% set display_badge = "Mais vendido" %}
+          {% set monthly_note = none %}
+          {% set savings_note = none %}
+          {% set price_suffix = "/mes" %}
+        {% elif plan.code == "pro-yearly" %}
+          {% set display_name = "Profissional Anual" %}
+          {% set display_description = "Para empresas que querem reduzir custo, garantir a operacao anual e receber implantacao assistida com melhores condicoes." %}
+          {% set display_features = ["Cobranca anual", "Tudo do Profissional Mensal", "Economia de R$ 698 no ano", "Implantacao assistida com condicao especial", "Prioridade no suporte", "PIX disponivel", "Cartao em ate 12x", "Ativacao imediata"] %}
+          {% set display_button = "Quero economizar no anual" %}
+          {% set display_badge = none %}
+          {% set monthly_note = "Equivalente a R$ 290,83/mes" %}
+          {% set savings_note = "Economize R$ 698,00 no ano" %}
+          {% set price_suffix = "/ano" %}
+        {% elif plan.code == "implantacao-avista" %}
+          {% set display_name = "Implantacao Assistida" %}
+          {% set display_description = "Configuracao inicial da central, conexao do WhatsApp, criacao dos setores e orientacao para sua equipe comecar do jeito certo." %}
+          {% set display_features = ["Pagamento unico", "Configuracao da empresa", "Criacao dos setores", "Cadastro inicial de usuarios", "Conexao do WhatsApp", "Configuracao de SLA", "Treinamento rapido da equipe", "Suporte inicial de ativacao", "PIX disponivel", "Cartao em ate 12x"] %}
+          {% set display_button = "Contratar implantacao" %}
+          {% set display_badge = none %}
+          {% set monthly_note = none %}
+          {% set savings_note = none %}
+          {% set price_suffix = "uma vez" %}
+        {% else %}
+          {% set display_name = plan.name %}
+          {% set display_description = plan.description %}
+          {% set display_features = ["Checkout seguro", "PIX disponivel", "Cartao em ate " ~ plan.max_installments ~ "x"] %}
+          {% set display_button = "Escolher este plano" %}
+          {% set display_badge = plan.highlight_text %}
+          {% set monthly_note = none %}
+          {% set savings_note = none %}
+          {% set price_suffix = none %}
+        {% endif %}
+        <article class="plan-card {% if plan.code == 'pro-monthly' %}is-highlighted{% endif %}">
+          {% if display_badge %}
+          <span class="plan-badge">{{ display_badge }}</span>
           {% endif %}
-          <h3>{{ plan.name }}</h3>
-          <div class="plan-price">{{ plan.price_display }}</div>
-          <p class="plan-description">{{ plan.description }}</p>
+          <h3>{{ display_name }}</h3>
+          <div class="plan-price">{{ plan.price_display }}{% if price_suffix %} <small>{{ price_suffix }}</small>{% endif %}</div>
+          {% if monthly_note %}
+          <div class="plan-price-note">{{ monthly_note }}</div>
+          {% endif %}
+          {% if savings_note %}
+          <div class="plan-savings">{{ savings_note }}</div>
+          {% endif %}
+          <p class="plan-description">{{ display_description }}</p>
           <ul class="plan-features">
-            <li>Periodo: {{ plan.billing_period }}</li>
-            <li>Parcelamento em ate {{ plan.max_installments }}x</li>
-            <li>PIX {{ "disponivel" if plan.allow_pix else "indisponivel" }}</li>
-            <li>Boleto {{ "disponivel" if plan.allow_boleto else "indisponivel" }}</li>
+            {% for feature in display_features %}
+            <li>{{ feature }}</li>
+            {% endfor %}
+            <li>Checkout seguro</li>
           </ul>
           <button
             class="btn btn-appsul plan-select-btn"
             type="button"
             data-plan-code="{{ plan.code }}"
           >
-            Escolher este plano
+            {{ display_button }}
           </button>
         </article>
         {% endfor %}
+      </div>
+    </section>
+
+    <section class="final-cta-panel">
+      <div>
+        <h2>Pronto para organizar o WhatsApp da sua empresa?</h2>
+        <p>Comece hoje com uma central profissional, acompanhe sua equipe e evite perder clientes por demora no atendimento.</p>
+      </div>
+      <div class="final-cta-actions">
+        <a class="btn btn-appsul plans-cta" href="#checkout">Comecar agora</a>
+        <a class="btn btn-outline-dark plans-cta" href="https://appsul.com.br" target="_blank" rel="noopener">Falar com especialista</a>
       </div>
     </section>
 

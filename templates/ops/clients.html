@@ -130,6 +130,11 @@
             <form method="POST" action="{{ url_for('ops.reset_admin_password', company_id=row.company.id) }}" style="display:inline;">
               <button class="btn btn-sm btn-outline-primary">Resetar Admin</button>
             </form>
+            {% if not row.is_protected %}
+            <form method="POST" action="{{ url_for('ops.delete_client', company_id=row.company.id) }}" style="display:inline;" onsubmit="return confirm('Excluir este cliente e todos os dados vinculados? Esta acao nao pode ser desfeita.');">
+              <button class="btn btn-sm btn-outline-danger">Excluir</button>
+            </form>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
