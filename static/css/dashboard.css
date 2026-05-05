@@ -2596,3 +2596,489 @@ body.sidebar-open {
     transform: translateX(0);
   }
 }
+
+/* Appsul client dashboard redesign */
+body.central-dashboard {
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --border: #d8e0ea;
+  --text: #172033;
+  --muted: #627084;
+  --primary: #075e54;
+  --primary-2: #0f766e;
+  --success: #198754;
+  --warning: #b7791f;
+  --danger: #c2413a;
+  --shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 13px;
+}
+
+body.central-dashboard .page {
+  padding: 18px;
+}
+
+body.central-dashboard .topbar {
+  display: grid;
+  grid-template-columns: minmax(270px, 430px) minmax(240px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+body.central-dashboard .title-wrap {
+  flex: initial;
+  max-width: none;
+  min-width: 0;
+}
+
+body.central-dashboard .button-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+body.central-dashboard .company-logo,
+body.central-dashboard .brand-badge,
+body.central-dashboard .avatar {
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+}
+
+body.central-dashboard .title-copy h2 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+body.central-dashboard .title-copy p {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+body.central-dashboard .search-panel-wrap {
+  padding: 0;
+  background: transparent;
+}
+
+body.central-dashboard .search {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--text);
+}
+
+body.central-dashboard .topbar-actions,
+body.central-dashboard .header-meta {
+  gap: 8px;
+}
+
+body.central-dashboard .header-user {
+  padding-right: 4px;
+}
+
+body.central-dashboard .button,
+body.central-dashboard .action-select,
+body.central-dashboard .chip,
+body.central-dashboard .status-pill,
+body.central-dashboard .badge {
+  border-radius: 8px;
+}
+
+body.central-dashboard .button {
+  min-height: 36px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+
+body.central-dashboard .button.soft,
+body.central-dashboard .logout-button {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+body.central-dashboard .head-actions .button.soft {
+  background: #fff;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body.central-dashboard .button.primary {
+  background: var(--primary);
+}
+
+body.central-dashboard .button.ai-toggle {
+  background: #e9f7f3;
+  color: var(--primary);
+  border-color: #bfe4d8;
+}
+
+body.central-dashboard .button.ai-toggle.off {
+  background: #fff7ed;
+  color: var(--warning);
+  border-color: #fed7aa;
+}
+
+body.central-dashboard .card {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+body.central-dashboard .operations-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+body.central-dashboard .metric-tile {
+  min-width: 0;
+  min-height: 74px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+body.central-dashboard .metric-tile span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+body.central-dashboard .metric-tile strong {
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1;
+}
+
+body.central-dashboard .metric-tile.compact strong {
+  font-size: 20px;
+}
+
+body.central-dashboard .workspace {
+  grid-template-columns: 360px minmax(0, 1fr) 280px;
+  gap: 12px;
+  min-height: 0;
+  height: calc(100vh - 134px);
+}
+
+body.central-dashboard .left-panel,
+body.central-dashboard .conversation-main,
+body.central-dashboard .sector-column {
+  min-height: 0;
+}
+
+body.central-dashboard .panel-header {
+  padding: 14px;
+}
+
+body.central-dashboard .panel-header h3,
+body.central-dashboard .sector-card h4,
+body.central-dashboard .sector-column .sector-item h4 {
+  font-size: 14px;
+}
+
+body.central-dashboard .panel-header p {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+body.central-dashboard .pill-count {
+  border-radius: 8px;
+  background: #eef6f4;
+  color: var(--primary);
+}
+
+body.central-dashboard .filters {
+  padding: 10px 12px;
+  background: #fbfcfe;
+}
+
+body.central-dashboard .chip {
+  padding: 7px 10px;
+}
+
+body.central-dashboard .chip.active {
+  background: #e9f7f3;
+  color: var(--primary);
+  border-color: #bfe4d8;
+}
+
+body.central-dashboard .conversation-list {
+  padding: 8px;
+  gap: 6px;
+  max-height: none;
+  border-top: 0;
+}
+
+body.central-dashboard .conversation-item {
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: none;
+}
+
+body.central-dashboard .conversation-item.active,
+body.central-dashboard .conversation-item.conversation-active {
+  border-color: var(--primary);
+  background: #f4fbf8;
+}
+
+body.central-dashboard .conversation-layout {
+  gap: 10px;
+}
+
+body.central-dashboard .conversation-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #e9f0f6;
+  color: var(--text);
+}
+
+body.central-dashboard .conversation-side {
+  gap: 8px;
+}
+
+body.central-dashboard .conversation-sector-badge {
+  max-width: 74px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  justify-content: center;
+  padding: 5px 7px;
+}
+
+body.central-dashboard .conversation-top strong {
+  font-size: 13px;
+}
+
+body.central-dashboard .conversation-time-pill,
+body.central-dashboard .conversation-preview,
+body.central-dashboard .meta-text {
+  font-size: 11px;
+}
+
+body.central-dashboard .conversation-main {
+  height: 100%;
+  background: #edf3f5;
+}
+
+body.central-dashboard .conversation-head {
+  padding: 12px;
+  background: #fff;
+}
+
+body.central-dashboard .conversation-head-top {
+  align-items: start;
+}
+
+body.central-dashboard .head-actions {
+  gap: 6px;
+}
+
+body.central-dashboard .head-actions .button,
+body.central-dashboard .head-actions .action-select {
+  min-height: 32px;
+  padding: 6px 9px;
+}
+
+body.central-dashboard .conversation-details-panel {
+  border-top: 1px solid var(--border);
+}
+
+body.central-dashboard .mini-info {
+  border-radius: 8px;
+  padding: 7px 9px;
+  min-width: 106px;
+}
+
+body.central-dashboard .mini-info span,
+body.central-dashboard .mini-info strong {
+  font-size: 11px;
+}
+
+body.central-dashboard .messages {
+  padding: 16px;
+  background:
+    linear-gradient(rgba(237, 243, 245, 0.94), rgba(237, 243, 245, 0.94)),
+    repeating-linear-gradient(135deg, rgba(7, 94, 84, 0.07) 0 1px, transparent 1px 14px);
+}
+
+body.central-dashboard .empty-chat {
+  margin: auto;
+  max-width: 340px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+body.central-dashboard .empty-chat strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+body.central-dashboard .empty-state {
+  margin: 10px;
+  padding: 18px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #fbfcfe;
+  line-height: 1.45;
+}
+
+body.central-dashboard .empty-state strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+body.central-dashboard .chat-bubble {
+  max-width: 70%;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+body.central-dashboard .chat-bubble.agent {
+  background: #dff5ed;
+  border-color: #bfe4d8;
+}
+
+body.central-dashboard .composer {
+  padding: 10px;
+}
+
+body.central-dashboard .composer-box {
+  border-radius: 8px;
+  padding: 8px;
+}
+
+body.central-dashboard .composer-attach-btn {
+  width: 38px;
+  min-width: 38px;
+  border-radius: 8px;
+}
+
+body.central-dashboard .chat-text-input {
+  min-height: 44px;
+  padding: 10px 6px;
+  font-size: 13px;
+}
+
+body.central-dashboard .sector-column {
+  overflow: auto;
+}
+
+body.central-dashboard .sector-card,
+body.central-dashboard .sector-column .sector-item {
+  border-radius: 8px;
+  padding: 12px;
+}
+
+body.central-dashboard .sector-stat,
+body.central-dashboard .history-item,
+body.central-dashboard .metric-item {
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+body.central-dashboard .wa-status-box {
+  background: #f4fbf8;
+  color: var(--text);
+  border: 1px solid #bfe4d8;
+  border-radius: 8px;
+}
+
+body.central-dashboard .d-none {
+  display: none !important;
+}
+
+@media (max-width: 1380px) {
+  body.central-dashboard .workspace {
+    grid-template-columns: 330px minmax(0, 1fr) 250px;
+  }
+
+  body.central-dashboard .operations-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  body.central-dashboard .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  body.central-dashboard .topbar-actions,
+  body.central-dashboard .header-meta {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  body.central-dashboard .operations-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.central-dashboard .workspace {
+    grid-template-columns: 330px minmax(0, 1fr);
+    height: calc(100vh - 238px);
+  }
+}
+
+@media (max-width: 860px) {
+  body.central-dashboard .page {
+    padding: 10px;
+  }
+
+  body.central-dashboard .title-copy h2 {
+    font-size: 18px;
+  }
+
+  body.central-dashboard .operations-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.central-dashboard .metric-tile {
+    min-height: 64px;
+  }
+
+  body.central-dashboard .workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  body.central-dashboard .left-panel {
+    min-height: calc(100vh - 236px);
+  }
+
+  body.central-dashboard .conversation-main {
+    min-height: calc(100vh - 20px);
+  }
+
+  body.central-dashboard .conversation-head-top,
+  body.central-dashboard .composer-box {
+    grid-template-columns: 1fr;
+  }
+
+  body.central-dashboard .head-actions {
+    justify-content: flex-start;
+  }
+
+  body.central-dashboard .chat-bubble {
+    max-width: 88%;
+  }
+}

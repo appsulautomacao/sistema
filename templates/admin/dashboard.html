@@ -1,310 +1,316 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block content %}
-
-<h3 class="mb-4">Painel Administrativo</h3>
-
-<div class="card shadow-sm p-3 mb-4">
-  <h5>Status do Sistema</h5>
-
-  <div class="row text-center">
-    <div class="col-md-4">
-      <strong>WhatsApp</strong><br>
-      {% if whatsapp_connected %}
-        <span class="text-success">Conectado</span>
-      {% else %}
-        <span class="text-danger">Desconectado</span>
-      {% endif %}
+<div class="admin-shell">
+  <aside class="admin-sidebar" aria-label="Menu administrativo">
+    <div class="admin-sidebar-brand">
+      <div class="admin-sidebar-mark">W</div>
+      <div>
+        <strong>WhatsApp SaaS</strong>
+        <span>{{ current_user.company.name if current_user.company else 'Operacao' }}</span>
+      </div>
     </div>
 
-    <div class="col-md-4">
-      <strong>Atendentes Online</strong><br>
-      {{ online_count }}
-    </div>
+    <nav class="admin-side-nav">
+      <a class="active" href="/admin">Visao Geral</a>
+      <a href="/dashboard">Atendimentos</a>
+      <a href="#conversationSearchCard">Conversas</a>
+      <a href="#chartsSection">Relatorios</a>
+      <a href="#qualitySection">Qualidade</a>
+      <a href="/admin/whatsapp">Integracoes</a>
+      <a href="/admin/ai-audit">Logs</a>
+      <a href="/admin/settings">Configuracoes</a>
+    </nav>
+  </aside>
 
-    <div class="col-md-4">
-      <strong>Setores</strong><br>
-      {{ sectors|length }}
-    </div>
-  </div>
-</div>
+  <section class="admin-main">
+    <header class="admin-page-head">
+      <div>
+        <span class="admin-eyebrow">Painel do cliente</span>
+        <h1>Painel Administrativo</h1>
+        <p>Acompanhe a saude da sua operacao em tempo real.</p>
+      </div>
+      <div class="period-filter" aria-label="Filtro visual de periodo">
+        <button type="button" class="active">Hoje</button>
+        <button type="button">Ultimos 7 dias</button>
+        <button type="button">Ultimos 30 dias</button>
+      </div>
+    </header>
 
-<div class="card shadow-sm p-3 mb-4">
-  <h5>Estrutura da Empresa</h5>
+    <section class="admin-kpi-grid" aria-label="Metricas principais">
+      <article class="admin-kpi-card status-card" data-whatsapp-status-card>
+        <div class="kpi-icon success">W</div>
+        <span>WhatsApp</span>
+        <strong id="adminWhatsappStatusLabel">{{ 'Conectado' if whatsapp_connected else 'Desconectado' }}</strong>
+        <small>Canal principal da operacao</small>
+      </article>
 
-  {% for sector in sectors %}
-    <div class="sector-box">
-      <div class="sector-title">
-        {{ sector.name }}
+      <article class="admin-kpi-card">
+        <div class="kpi-icon green">ON</div>
+        <span>Atendentes online</span>
+        <strong>{{ online_count }}</strong>
+        <small>Ativos nos ultimos 5 min</small>
+      </article>
+
+      <article class="admin-kpi-card">
+        <div class="kpi-icon blue">ST</div>
+        <span>Setores</span>
+        <strong>{{ sectors|length }}</strong>
+        <small>Estrutura cadastrada</small>
+      </article>
+
+      <article class="admin-kpi-card">
+        <div class="kpi-icon blue">CV</div>
+        <span>Conversas abertas</span>
+        <strong>{{ metrics.open_conversations }}</strong>
+        <small>Fila total em andamento</small>
+      </article>
+
+      <article class="admin-kpi-card">
+        <div class="kpi-icon orange">TM</div>
+        <span>Tempo medio</span>
+        <strong>{{ metrics.avg_response }} min</strong>
+        <small>Primeira resposta</small>
+      </article>
+
+      <article class="admin-kpi-card">
+        <div class="kpi-icon red">SLA</div>
+        <span>SLA estourado</span>
+        <strong>{{ metrics.sla_breached }}</strong>
+        <small>Alertas em conversas abertas</small>
+      </article>
+
+      <article class="admin-kpi-card">
+        <div class="kpi-icon navy">TT</div>
+        <span>Total de atendimentos</span>
+        <strong>{{ metrics.total }}</strong>
+        <small>{{ operational_summary.today }} criados hoje</small>
+      </article>
+
+      <article class="admin-kpi-card muted-card">
+        <div class="kpi-icon muted">CS</div>
+        <span>Satisfacao</span>
+        <strong>{% if operational_summary.satisfaction is not none %}{{ operational_summary.satisfaction }}%{% else %}--{% endif %}</strong>
+        <small>Aguardando endpoint de CSAT</small>
+      </article>
+    </section>
+
+    <section class="admin-content-grid">
+      <div class="admin-column-main">
+        <section class="admin-card" id="companyStructure">
+          <div class="card-head">
+            <div>
+              <h2>Estrutura da Empresa</h2>
+              <p>Setores, usuarios e carga operacional atual.</p>
+            </div>
+            <a class="admin-link" href="/admin/sectors">Gerenciar setores</a>
+          </div>
+
+          <div class="sector-grid">
+            {% for sector in sectors %}
+              {% set ops = sector_operations.get(sector.id, {}) %}
+              {% set sector_users = sector_user_map.get(sector.id, []) %}
+              <article class="sector-card-modern">
+                <div class="sector-card-top">
+                  <div>
+                    <strong>{{ sector.name }}</strong>
+                    <span>{{ sector_users|length }} usuario{{ '' if sector_users|length == 1 else 's' }}</span>
+                  </div>
+                  <span class="sector-status {{ 'is-central' if sector.is_central else 'is-active' }}">
+                    {{ 'Central' if sector.is_central else 'Ativo' }}
+                  </span>
+                </div>
+
+                <div class="sector-metrics-row">
+                  <div><span>Fila</span><strong>{{ ops.get('queue', 0) }}</strong></div>
+                  <div><span>Em atendimento</span><strong>{{ ops.get('assigned', 0) }}</strong></div>
+                </div>
+
+                <div class="sector-users-list">
+                  {% if sector_users %}
+                    {% for user in sector_users %}
+                      <div class="sector-user-pill">
+                        <span class="status-dot {% if user.last_seen and user.last_seen > online_limit %}online{% else %}offline{% endif %}"></span>
+                        <span>{{ user.name }}</span>
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <div class="sector-empty">Sem usuarios cadastrados</div>
+                  {% endif %}
+                </div>
+              </article>
+            {% else %}
+              <div class="admin-empty">Nenhum setor cadastrado ainda.</div>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="admin-card" id="chartsSection">
+          <div class="card-head">
+            <div>
+              <h2>Graficos</h2>
+              <p>Leitura rapida de volume, desempenho e SLA.</p>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-panel">
+              <h3>Atendimentos por Agente</h3>
+              <canvas id="agentChart"></canvas>
+            </div>
+            <div class="chart-panel">
+              <h3>Volume de Conversas</h3>
+              <canvas id="volumeChart"></canvas>
+            </div>
+            <div class="chart-panel placeholder-chart" id="qualitySection">
+              <h3>SLA por setor</h3>
+              <div class="placeholder-bars">
+                <span style="height: 72%"></span>
+                <span style="height: 48%"></span>
+                <span style="height: 58%"></span>
+                <span style="height: 34%"></span>
+              </div>
+              <p>Placeholder visual. Conectar a /api/metrics/sectors/routing em uma proxima etapa.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-card" id="conversationSearchCard">
+          <div class="card-head">
+            <div>
+              <h2>Buscar Atendimento</h2>
+              <p>Localize conversas por cliente, agente ou data.</p>
+            </div>
+          </div>
+
+          <div class="search-form-grid">
+            <input type="text" id="filterClient" class="form-control" placeholder="Cliente">
+            <input type="text" id="filterAgent" class="form-control" placeholder="Atendente">
+            <input type="date" id="filterDate" class="form-control">
+            <button class="admin-primary-button" type="button" onclick="buscarConversas()">Buscar</button>
+          </div>
+
+          <div id="conversationList" class="admin-results-list"></div>
+        </section>
+
+        <section class="admin-card">
+          <div class="card-head">
+            <div>
+              <h2>Fluxos da Central</h2>
+              <p>Entradas, saidas e rotas da triagem.</p>
+            </div>
+          </div>
+
+          {% if central_handoff_summary.sector_id %}
+            <div class="handoff-summary-grid">
+              <div><span>Setor Central</span><strong>{{ central_handoff_summary.sector_name }}</strong></div>
+              <div><span>Saidas</span><strong>{{ central_handoff_summary.outbound_handoffs }}</strong></div>
+              <div><span>Retornos</span><strong>{{ central_handoff_summary.inbound_handoffs }}</strong></div>
+              <div><span>Rotas Ativas</span><strong>{{ central_handoff_summary.unique_outbound_paths + central_handoff_summary.unique_inbound_paths }}</strong></div>
+            </div>
+          {% else %}
+            <div class="admin-empty">Defina um setor central para acompanhar os fluxos da triagem.</div>
+          {% endif %}
+        </section>
       </div>
 
-      {% if sector.users %}
-        {% for user in sector.users %}
-          <div class="user-row">
-            <div class="user-info">
-              <span class="status-dot {% if user.last_seen and user.last_seen > online_limit %}online{% else %}offline{% endif %}"></span>
-              <span class="user-name">{{ user.name }}</span>
-            </div>
-
-            <div class="user-status">
-              {% if user.last_seen and user.last_seen > online_limit %}
-                Online
-              {% else %}
-                Offline
-              {% endif %}
-            </div>
+      <aside class="admin-column-side">
+        <section class="admin-card side-card">
+          <div class="card-head compact">
+            <h2>Resumo Operacional</h2>
           </div>
-        {% endfor %}
-      {% else %}
-        <div class="text-muted">Sem usuarios</div>
-      {% endif %}
-    </div>
-  {% endfor %}
-</div>
-
-<div class="row mb-4">
-  <div class="col-md-3">
-    <div class="card shadow-sm p-3 text-center">
-      <h6>Conversas Abertas</h6>
-      <h4>{{ metrics.open_conversations }}</h4>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card shadow-sm p-3 text-center">
-      <h6>Tempo Medio</h6>
-      <h4>{{ metrics.avg_response }} min</h4>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card shadow-sm p-3 text-center">
-      <h6>SLA Estourado</h6>
-      <h4>{{ metrics.sla_breached }}</h4>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card shadow-sm p-3 text-center">
-      <h6>Total</h6>
-      <h4>{{ metrics.total }}</h4>
-    </div>
-  </div>
-</div>
-
-<div class="card shadow-sm p-3 mb-4">
-  <h5>Atendimentos por Agente</h5>
-  <canvas id="agentChart"></canvas>
-</div>
-
-<div class="card shadow-sm p-3 mb-4">
-  <h5>Buscar Atendimento</h5>
-
-  <div class="row g-2">
-    <div class="col-md-3">
-      <input type="text" id="filterClient" class="form-control" placeholder="Cliente">
-    </div>
-
-    <div class="col-md-3">
-      <input type="text" id="filterAgent" class="form-control" placeholder="Atendente">
-    </div>
-
-    <div class="col-md-3">
-      <input type="date" id="filterDate" class="form-control">
-    </div>
-
-    <div class="col-md-3">
-      <button class="btn btn-primary w-100" onclick="buscarConversas()">
-        Buscar
-      </button>
-    </div>
-  </div>
-</div>
-
-<div id="conversationList" class="card shadow-sm p-3 mb-4"></div>
-
-<div class="card shadow-sm p-3 mb-4">
-  <h5>Ranking</h5>
-
-  {% for agent in ranking %}
-    <div class="d-flex justify-content-between border-bottom py-2">
-      <strong>{{ loop.index }}º {{ agent.name }}</strong>
-      <small>{{ agent.count }} atendimentos</small>
-    </div>
-  {% endfor %}
-</div>
-
-<div class="row mb-4">
-  <div class="col-md-12 mb-4">
-    <div class="card shadow-sm p-3">
-      <h5>Fluxos da Central</h5>
-
-      {% if central_handoff_summary.sector_id %}
-        <div class="row text-center mb-3">
-          <div class="col-md-3">
-            <strong>Setor Central</strong><br>
-            {{ central_handoff_summary.sector_name }}
+          <div class="ops-list">
+            <div class="ops-row blue"><span>Fila atual</span><strong>{{ operational_summary.queue }}</strong></div>
+            <div class="ops-row green"><span>Em atendimento</span><strong>{{ operational_summary.assigned }}</strong></div>
+            <div class="ops-row orange"><span>Nao lidas</span><strong>{{ operational_summary.unread }}</strong></div>
+            <div class="ops-row red"><span>Alertas SLA</span><strong>{{ operational_summary.sla }}</strong></div>
           </div>
-          <div class="col-md-3">
-            <strong>Saidas da Central</strong><br>
-            {{ central_handoff_summary.outbound_handoffs }}
-          </div>
-          <div class="col-md-3">
-            <strong>Retornos para Central</strong><br>
-            {{ central_handoff_summary.inbound_handoffs }}
-          </div>
-          <div class="col-md-3">
-            <strong>Rotas Ativas</strong><br>
-            {{ central_handoff_summary.unique_outbound_paths + central_handoff_summary.unique_inbound_paths }}
-          </div>
-        </div>
+        </section>
 
-        <div class="row">
-          <div class="col-md-6">
-            <h6>Central -> Setores</h6>
-            {% if central_outbound_paths %}
-              {% for path in central_outbound_paths %}
-                <div class="d-flex justify-content-between border-bottom py-2">
-                  <div>
-                    <strong>{{ path.to_sector_name }}</strong><br>
-                    <small>{{ path.count }} envios</small>
-                  </div>
-                  <div class="text-end">
-                    <small>
-                      tempo medio:
-                      {% if path.average_destination_minutes is not none %}
-                        {{ path.average_destination_minutes }} min
-                      {% else %}
-                        sem historico
-                      {% endif %}
-                    </small>
-                  </div>
-                </div>
-              {% endfor %}
+        <section class="admin-card side-card">
+          <div class="card-head compact">
+            <h2>Ranking</h2>
+          </div>
+          <div class="ranking-list">
+            {% for agent in ranking %}
+              <div class="ranking-row">
+                <span>{{ loop.index }}</span>
+                <strong>{{ agent.name }}</strong>
+                <small>{{ agent.count }} atendimentos</small>
+              </div>
             {% else %}
-              <div class="text-muted">Nenhum envio da Central registrado ainda.</div>
-            {% endif %}
+              <div class="admin-empty">Sem atendimentos ranqueados ainda.</div>
+            {% endfor %}
           </div>
+        </section>
 
-          <div class="col-md-6">
-            <h6>Setores -> Central</h6>
-            {% if central_inbound_paths %}
-              {% for path in central_inbound_paths %}
-                <div class="d-flex justify-content-between border-bottom py-2">
-                  <div>
-                    <strong>{{ path.from_sector_name }}</strong><br>
-                    <small>{{ path.count }} retornos</small>
-                  </div>
-                  <div class="text-end">
-                    <small>
-                      tempo medio:
-                      {% if path.average_destination_minutes is not none %}
-                        {{ path.average_destination_minutes }} min
-                      {% else %}
-                        sem historico
-                      {% endif %}
-                    </small>
-                  </div>
-                </div>
-              {% endfor %}
+        <section class="admin-card side-card">
+          <div class="card-head compact">
+            <h2>Atividades Recentes</h2>
+          </div>
+          <div class="activity-list">
+            {% if whatsapp_connected %}
+              <div class="activity-item"><span class="activity-dot green"></span><div><strong>WhatsApp conectado</strong><small>Status do canal principal</small></div></div>
             {% else %}
-              <div class="text-muted">Nenhum retorno para a Central registrado ainda.</div>
+              <div class="activity-item"><span class="activity-dot red"></span><div><strong>WhatsApp desconectado</strong><small>Verifique a integracao</small></div></div>
             {% endif %}
+            {% if operational_summary.sla == 0 %}
+              <div class="activity-item"><span class="activity-dot green"></span><div><strong>Nenhum alerta SLA</strong><small>Operacao sem estouro aberto</small></div></div>
+            {% endif %}
+            {% for event in recent_events %}
+              <div class="activity-item">
+                <span class="activity-dot blue"></span>
+                <div>
+                  <strong>{{ event.event_type or event.action_type }}</strong>
+                  <small>{{ event.created_at.strftime('%d/%m %H:%M') }}</small>
+                </div>
+              </div>
+            {% else %}
+              <div class="activity-item"><span class="activity-dot orange"></span><div><strong>Sem eventos recentes</strong><small>Layout preparado para historico real</small></div></div>
+            {% endfor %}
           </div>
-        </div>
-      {% else %}
-        <div class="text-muted">Defina um setor central para acompanhar os fluxos da triagem.</div>
-      {% endif %}
-    </div>
-  </div>
+        </section>
 
-  <div class="col-md-6">
-    <div class="card shadow-sm p-3 h-100">
-      <h5>Transferencias Entre Setores</h5>
-      <div class="text-muted small mb-3">
-        {{ handoff_summary.total_handoffs }} transferencias em {{ handoff_summary.unique_paths }} rotas
-      </div>
-
-      {% if handoff_paths %}
-        {% for path in handoff_paths %}
-          <div class="d-flex justify-content-between border-bottom py-2">
-            <div>
-              <strong>{{ path.from_sector_name }} -> {{ path.to_sector_name }}</strong><br>
-              <small>{{ path.unique_conversations }} conversas</small><br>
-              <small>
-                tempo medio no destino:
-                {% if path.average_destination_minutes is not none %}
-                  {{ path.average_destination_minutes }} min
-                {% else %}
-                  sem historico fechado
-                {% endif %}
-              </small>
-            </div>
-            <div class="text-end">
-              <strong>{{ path.count }}</strong><br>
-              <small>handoffs</small><br>
-              <small>
-                pico:
-                {% if path.longest_destination_minutes is not none %}
-                  {{ path.longest_destination_minutes }} min
-                {% else %}
-                  -
-                {% endif %}
-              </small>
-            </div>
+        <section class="admin-card side-card">
+          <div class="card-head compact">
+            <h2>Ultimas Conversas</h2>
           </div>
-        {% endfor %}
-      {% else %}
-        <div class="text-muted">Ainda nao houve transferencias entre setores.</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="col-md-6">
-    <div class="card shadow-sm p-3 h-100">
-      <h5>Fluxo por Setor</h5>
-
-      {% if handoff_sectors %}
-        {% for sector in handoff_sectors %}
-          <div class="d-flex justify-content-between border-bottom py-2">
-            <div>
-              <strong>{{ sector.sector_name }}</strong><br>
-              <small>saldo {{ sector.handoff_balance }}</small>
-            </div>
-            <div class="text-end">
-              <small>Entradas {{ sector.incoming_handoffs }}</small><br>
-              <small>Saidas {{ sector.outgoing_handoffs }}</small>
-            </div>
+          <div class="latest-list">
+            {% for conv in conversations %}
+              <div class="latest-row">
+                <strong>{{ conv.contact }}</strong>
+                <small>{{ conv.last_message }}</small>
+              </div>
+            {% else %}
+              <div class="admin-empty">Sem conversas registradas.</div>
+            {% endfor %}
           </div>
-        {% endfor %}
-      {% else %}
-        <div class="text-muted">Sem movimentacao entre setores ate o momento.</div>
-      {% endif %}
-    </div>
-  </div>
+        </section>
+      </aside>
+    </section>
+  </section>
 </div>
 
-<div class="card shadow-sm p-3">
-  <h5>Ultimas Conversas</h5>
-
-  {% for conv in conversations %}
-    <div class="border-bottom py-2">
-      <strong>{{ conv.contact }}</strong><br>
-      <small>{{ conv.last_message }}</small>
+<div id="conversationModal" class="admin-modal" aria-hidden="true">
+  <div class="admin-modal-dialog">
+    <div class="admin-modal-head">
+      <h3 id="modalTitle">Conversa</h3>
+      <button type="button" class="admin-modal-close" onclick="closeConversationModal()">Fechar</button>
     </div>
-  {% endfor %}
+    <div id="modalMessages" class="admin-modal-messages"></div>
+  </div>
 </div>
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
-
 <script>
-  initChart(
+  initAdminCharts(
     {{ ranking | map(attribute='name') | list | tojson }},
-    {{ ranking | map(attribute='count') | list | tojson }}
+    {{ ranking | map(attribute='count') | list | tojson }},
+    {{ volume_labels | tojson }},
+    {{ volume_counts | tojson }}
   );
+  refreshAdminWhatsappStatus();
 </script>
-
 {% endblock %}

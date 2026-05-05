@@ -15,7 +15,7 @@ from core.company_identity import (
     normalize_brand_color,
     slugify_company_name,
 )
-from models import AILog, Company, CompanySettings, User, Sector, ConversationHistory
+from models import AILog, Company, CompanySettings, User, Sector, ConversationHistory, SLAEvent
 from core.history import build_routing_audit
 from core.assistant_ai import generate_company_assistant_reply
 from core.metrics import get_sector_handoff_analytics
@@ -57,7 +57,7 @@ def settings():
         )
         db.session.commit()
 
-    # 🔥 GARANTE QUE SETTINGS EXISTE
+    # Garante que settings existe.
     if not settings:
         settings = CompanySettings(company_id=current_user.company_id)
         db.session.add(settings)
@@ -142,7 +142,7 @@ def settings():
         db.session.commit()
         flash("Configurações da empresa atualizadas com sucesso.", "success")
 
-        # 🔥 REDIRECIONA CORRETAMENTE
+        # Redireciona corretamente.
         return redirect("/admin")
 
     return render_template(
@@ -433,7 +433,7 @@ def delete_user(user_id):
         flash("Não é possível excluir seu próprio usuário.", "warning")
         return redirect(url_for("admin.users"))
 
-    # verificar histórico
+    # Verificar histórico.
     history = ConversationHistory.query.filter_by(
         user_id=user.id
     ).first()
@@ -464,34 +464,67 @@ def admin_home():
     if current_user.role != "ADMIN":
         return redirect("/dashboard")
 
-    # 📊 MÉTRICAS
+    company_id = current_user.company_id
+    today = datetime.utcnow().date()
+
+    open_conversations = Conversation.query.filter_by(
+        company_id=company_id,
+        status="open"
+    ).count()
+    assigned_conversations = Conversation.query.filter(
+        Conversation.company_id == company_id,
+        Conversation.status == "open",
+        Conversation.assigned_to.isnot(None)
+    ).count()
+    queue_conversations = Conversation.query.filter(
+        Conversation.company_id == company_id,
+        Conversation.status == "open",
+        Conversation.assigned_to.is_(None)
+    ).count()
+    unread_conversations = Conversation.query.filter_by(
+        company_id=company_id,
+        is_read=False
+    ).count()
+    sla_breached = db.session.query(func.count(func.distinct(SLAEvent.conversation_id))).join(
+        Conversation,
+        Conversation.id == SLAEvent.conversation_id
+    ).filter(
+        Conversation.company_id == company_id,
+        Conversation.status == "open",
+        SLAEvent.event_type == "breached"
+    ).scalar() or 0
+    today_conversations = Conversation.query.filter(
+        Conversation.company_id == company_id,
+        func.date(Conversation.created_at) == today
+    ).count()
+
     metrics = {
-        "open_conversations": Conversation.query.filter_by(
-            company_id=current_user.company_id,
-            status="open"
-        ).count(),
-
-        "total": Conversation.query.filter_by(
-            company_id=current_user.company_id
-        ).count(),
-
-        "sla_breached": 0,
+        "open_conversations": open_conversations,
+        "total": Conversation.query.filter_by(company_id=company_id).count(),
+        "sla_breached": sla_breached,
         "avg_response": 2
     }
 
-    # 🏆 RANKING
+    operational_summary = {
+        "queue": queue_conversations,
+        "assigned": assigned_conversations,
+        "unread": unread_conversations,
+        "sla": sla_breached,
+        "today": today_conversations,
+        "satisfaction": None,
+    }
+
     ranking = db.session.query(
         User.name,
         func.count(Conversation.id).label("count")
     ).join(Conversation).filter(
-        Conversation.company_id == current_user.company_id
+        Conversation.company_id == company_id
     ).group_by(User.name).all()
 
     ranking = [{"name": r[0], "count": r[1]} for r in ranking]
 
-    # 📜 HISTÓRICO REAL (últimas conversas)
     conversations_db = Conversation.query.filter_by(
-        company_id=current_user.company_id
+        company_id=company_id
     ).order_by(Conversation.created_at.desc()).limit(10).all()
 
     conversations = []
@@ -502,34 +535,71 @@ def admin_home():
         ).order_by(Message.created_at.desc()).first()
 
         conversations.append({
-            "contact": c.client_name,
-            "last_message": last_msg.content if last_msg else ""
+            "contact": c.client_name or c.client_phone or "Sem nome",
+            "last_message": last_msg.content if last_msg else "Sem mensagens"
         })
 
-    # 🏢 SETORES + USUÁRIOS
     sectors = Sector.query.filter_by(
-        company_id=current_user.company_id
+        company_id=company_id
     ).all()
-    handoff_analytics = get_sector_handoff_analytics(current_user.company_id)
+    handoff_analytics = get_sector_handoff_analytics(company_id)
 
-    # 🟢 STATUS ONLINE
+    sector_operations = {}
+    sector_user_map = {}
+    for sector in sectors:
+        sector_user_map[sector.id] = User.query.filter_by(
+            company_id=company_id,
+            sector_id=sector.id
+        ).all()
+        sector_operations[sector.id] = {
+            "queue": Conversation.query.filter(
+                Conversation.company_id == company_id,
+                Conversation.status == "open",
+                Conversation.current_sector_id == sector.id,
+                Conversation.assigned_to.is_(None)
+            ).count(),
+            "assigned": Conversation.query.filter(
+                Conversation.company_id == company_id,
+                Conversation.status == "open",
+                Conversation.current_sector_id == sector.id,
+                Conversation.assigned_to.isnot(None)
+            ).count(),
+        }
+
     online_limit = datetime.utcnow() - timedelta(minutes=5)
 
     online_count = User.query.filter(
-        User.company_id == current_user.company_id,
+        User.company_id == company_id,
         User.last_seen != None,
         User.last_seen > online_limit
     ).count()
 
-    # 📱 STATUS WHATSAPP (simples por enquanto)
-    whatsapp_connected = True  # depois ligamos com API real
+    recent_events = ConversationHistory.query.filter_by(
+        company_id=company_id
+    ).order_by(ConversationHistory.created_at.desc()).limit(6).all()
+
+    volume_rows = db.session.query(
+        func.date(Conversation.created_at).label("day"),
+        func.count(Conversation.id).label("conversation_count")
+    ).filter(
+        Conversation.company_id == company_id,
+        Conversation.created_at >= datetime.utcnow() - timedelta(days=6)
+    ).group_by(func.date(Conversation.created_at)).order_by(func.date(Conversation.created_at)).all()
+
+    volume_labels = [row.day.strftime("%d/%m") if hasattr(row.day, "strftime") else str(row.day) for row in volume_rows]
+    volume_counts = [row.conversation_count for row in volume_rows]
+
+    whatsapp_connected = True
 
     return render_template(
         "admin/dashboard.html",
         metrics=metrics,
+        operational_summary=operational_summary,
         ranking=ranking,
         conversations=conversations,
         sectors=sectors,
+        sector_operations=sector_operations,
+        sector_user_map=sector_user_map,
         handoff_summary=handoff_analytics["summary"],
         handoff_paths=handoff_analytics["paths"][:8],
         handoff_sectors=handoff_analytics["sectors"][:8],
@@ -538,7 +608,10 @@ def admin_home():
         central_inbound_paths=handoff_analytics["central"]["inbound_paths"][:6],
         online_count=online_count,
         online_limit=online_limit,
-        whatsapp_connected=whatsapp_connected
+        whatsapp_connected=whatsapp_connected,
+        recent_events=recent_events,
+        volume_labels=volume_labels,
+        volume_counts=volume_counts,
     )
 
 
@@ -585,7 +658,7 @@ def search_conversations():
         result.append({
             "id": c.id,
             "client": c.client_name or c.client_phone,
-            "agent": c.agent.name if c.agent else "Não atribuído",
+            "agent": c.agent.name if c.agent else "Nao atribuido",
             "last_message": last_msg.content if last_msg else "",
             "date": c.created_at.strftime("%d/%m %H:%M")
         })

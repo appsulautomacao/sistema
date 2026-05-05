@@ -1,148 +1,170 @@
-console.log("admin.js carregado");
+﻿function adminEscapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function buscarConversas() {
+  const client = document.getElementById("filterClient")?.value || "";
+  const agent = document.getElementById("filterAgent")?.value || "";
+  const date = document.getElementById("filterDate")?.value || "";
+  const container = document.getElementById("conversationList");
+  if (!container) return;
 
-    const client = document.getElementById("filterClient").value;
-    const agent = document.getElementById("filterAgent").value;
-    const date = document.getElementById("filterDate").value;
+  container.innerHTML = `<div class="empty-state">Buscando conversas...</div>`;
 
-    const res = await fetch(`/admin/api/conversations?client=${client}&agent=${agent}&date=${date}`);
-    const data = await res.json();
+  const params = new URLSearchParams({ client, agent, date });
+  const res = await fetch(`/admin/api/conversations?${params.toString()}`);
+  const data = await res.json();
 
-    const container = document.getElementById("conversationList");
-    container.innerHTML = "";
+  if (!Array.isArray(data) || data.length === 0) {
+    container.innerHTML = `<div class="empty-state">Nenhuma conversa encontrada</div>`;
+    return;
+  }
 
-    if (data.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                Nenhuma conversa encontrada
-            </div>
-        `;
-        return;
-    }
+  container.innerHTML = "";
+  data.forEach(conv => {
+    const div = document.createElement("div");
+    div.className = "conversation-item";
+    div.innerHTML = `
+      <div class="result-item-content">
+        <strong>${adminEscapeHtml(conv.client)}</strong>
+        <span>${adminEscapeHtml(conv.agent)}</span><br>
+        <small>${adminEscapeHtml(conv.last_message || "Sem mensagens")}</small><br>
+        <small class="text-muted">${adminEscapeHtml(conv.date)}</small>
+      </div>
+    `;
+    div.addEventListener("click", () => openConversation(conv.id));
+    container.appendChild(div);
+  });
+}
 
-    data.forEach(conv => {
+function openConversation(id) {
+  fetch(`/admin/conversations/${id}`)
+    .then(res => res.json())
+    .then(data => {
+      const modal = document.getElementById("conversationModal");
+      const title = document.getElementById("modalTitle");
+      const container = document.getElementById("modalMessages");
+      if (!modal || !title || !container) return;
 
+      title.innerText = data?.conversation?.client || "Conversa";
+      container.innerHTML = "";
+
+      const messages = Array.isArray(data?.messages) ? data.messages : [];
+      if (!messages.length) {
+        container.innerHTML = `<div class="empty-state">Sem mensagens nesta conversa.</div>`;
+      }
+
+      messages.forEach(msg => {
         const div = document.createElement("div");
-
-        div.className = "conversation-item";
-
-        // 🔥 AQUI É O PONTO QUE VOCÊ NÃO TINHA
+        div.className = `chat-message ${msg.from_me ? "sent" : "received"}`;
         div.innerHTML = `
-            <div onclick="openConversation(${conv.id})">
-                <strong>${conv.client}</strong> (${conv.agent})<br>
-                <small>${conv.last_message}</small><br>
-                <small class="text-muted">${conv.date}</small>
-            </div>
+          <div class="bubble">
+            ${adminEscapeHtml(msg.content)}
+            <div class="time">${adminEscapeHtml(msg.time)}</div>
+          </div>
         `;
-
         container.appendChild(div);
+      });
+
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+    })
+    .catch(() => {
+      alert("Nao foi possivel abrir a conversa.");
     });
 }
 
-
-function openConversation(id) {
-    fetch(`/admin/conversations/${id}`)
-        .then(res => res.json())
-        .then(data => {
-            console.log(data);
-            // depois vamos ligar com modal
-        });
+function closeConversationModal() {
+  const modal = document.getElementById("conversationModal");
+  if (!modal) return;
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
 }
 
+function initAdminCharts(agentLabels, agentData, volumeLabels, volumeData) {
+  if (typeof Chart !== "function") return;
 
+  const agentCanvas = document.getElementById("agentChart");
+  if (agentCanvas) {
+    new Chart(agentCanvas, {
+      type: "bar",
+      data: {
+        labels: agentLabels,
+        datasets: [{
+          label: "Atendimentos",
+          data: agentData,
+          backgroundColor: "#2563eb",
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
 
-// 📊 GRÁFICO
-function initChart(labels, data) {
-    new Chart(document.getElementById('agentChart'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Atendimentos',
-                data: data,
-            }]
-        }
+  const volumeCanvas = document.getElementById("volumeChart");
+  if (volumeCanvas) {
+    new Chart(volumeCanvas, {
+      type: "line",
+      data: {
+        labels: volumeLabels,
+        datasets: [{
+          label: "Conversas",
+          data: volumeData,
+          borderColor: "#22c55e",
+          backgroundColor: "rgba(34, 197, 94, 0.14)",
+          tension: 0.35,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+}
+
+function refreshAdminWhatsappStatus() {
+  const label = document.getElementById("adminWhatsappStatusLabel");
+  const card = document.querySelector("[data-whatsapp-status-card]");
+  if (!label) return;
+
+  fetch("/admin/whatsapp/status")
+    .then(res => res.json())
+    .then(data => {
+      const connected = data?.status === "open" || data?.instance?.state === "open";
+      label.textContent = connected ? "Conectado" : "Desconectado";
+      if (card) {
+        card.classList.toggle("is-offline", !connected);
+      }
+    })
+    .catch(() => {
+      label.textContent = "Indisponivel";
+      if (card) card.classList.add("is-offline");
     });
 }
 
-// 🔎 BUSCA
-async function buscarConversas() {
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    closeConversationModal();
+  }
+});
 
-    const client = document.getElementById("filterClient").value;
-    const agent = document.getElementById("filterAgent").value;
-    const date = document.getElementById("filterDate").value;
-
-    const res = await fetch(`/admin/api/conversations?client=${client}&agent=${agent}&date=${date}`);
-    const data = await res.json();
-
-    const container = document.getElementById("conversationList");
-    container.innerHTML = "";
-
-    if (data.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                Nenhuma conversa encontrada
-            </div>
-        `;
-        return;
-    }
-
-    data.forEach(conv => {
-
-        const div = document.createElement("div");
-
-        div.className = "conversation-item";
-
-        div.innerHTML = `
-            <strong>${conv.client}</strong> (${conv.agent})<br>
-            <small>${conv.last_message}</small><br>
-            <small class="text-muted">${conv.date}</small>
-        `;
-
-        container.appendChild(div);
-    });
-}
-
-
-function openConversation(id) {
-    fetch(`/admin/conversations/${id}`)
-        .then(res => res.json())
-        .then(data => {
-
-            const modal = document.getElementById("conversationModal");
-            const title = document.getElementById("modalTitle");
-            const container = document.getElementById("modalMessages");
-
-            title.innerText = data.conversation.client;
-
-            container.innerHTML = "";
-
-            data.messages.forEach(msg => {
-
-                const div = document.createElement("div");
-
-                div.classList.add("chat-message");
-
-                if (msg.from_me) {
-                    div.classList.add("sent");
-                } else {
-                    div.classList.add("received");
-                }
-
-                div.innerHTML = `
-                    <div class="bubble">
-                        ${msg.content}
-                        <div class="time">${msg.time}</div>
-                    </div>
-                `;
-
-                container.appendChild(div);
-            });
-
-            modal.style.display = "block";
-        });
-}
-
-function openConversation(id) {
-    console.log("clicou na conversa:", id);
-}
+document.addEventListener("click", event => {
+  const modal = document.getElementById("conversationModal");
+  if (modal && event.target === modal) {
+    closeConversationModal();
+  }
+});

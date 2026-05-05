@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Central de Atendimento</title>
+  <title>Appsul | Central de Atendimento</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 <body
@@ -17,7 +17,7 @@
       <div class="brand-badge">{{ (company.name[:1] if company and company.name else 'A')|upper }}</div>
       <div>
         <h1>{{ company.name if company else 'Appsul Central' }}</h1>
-        <p>Atendimento inteligente</p>
+        <p>Central WhatsApp</p>
       </div>
     </div>
 
@@ -39,10 +39,10 @@
         <span class="tag">{{ company.users|length if company and company.users is defined else 0 }}</span>
       </a>
       <a href="#">
-        Relatórios
+        Relatorios
         <span class="tag">Novo</span>
       </a>
-      <a href="#">Configurações</a>
+      <a href="#">Configuracoes</a>
       {% if current_user.is_authenticated and current_user.role == "ADMIN" %}
       <a href="/admin">
         Administrativo
@@ -52,12 +52,12 @@
     </nav>
 
     <div class="sidebar-footer">
-      <strong>Resumo rápido</strong>
+      <strong>Resumo rapido</strong>
       <div id="iaStatusHint" style="margin-top:8px;">
         {% if company and company.settings and company.settings.central_ai_enabled %}
         A IA ajuda a triar e orientar o atendimento da central.
         {% else %}
-        A central está operando apenas com atendimento humano.
+        A central esta operando apenas com atendimento humano.
         {% endif %}
       </div>
       <div id="iaLabel" style="margin-top:8px; font-weight:600;">
@@ -70,59 +70,80 @@
   <main class="page">
     <div class="topbar">
       <div class="title-wrap">
-        <button class="button-icon" id="sidebarToggleBtn" type="button" onclick="document.body.classList.add('sidebar-open')">☰</button>
+        <button class="button-icon" id="sidebarToggleBtn" type="button" onclick="document.body.classList.add('sidebar-open')" aria-label="Abrir menu">Menu</button>
         <div class="company-logo" id="topbarLogo">
           {{ (company.name[:1] if company and company.name else 'A')|upper }}
         </div>
         <div class="title-copy">
           <h2>Central de Atendimento</h2>
-          <p>Visão profissional da operação com distribuição clara e foco em SLA.</p>
+          <p>Conversas, equipe e SLA em uma operacao limpa e rastreavel.</p>
         </div>
       </div>
 
       <div class="search-panel-wrap">
-          <input
-            type="text"
-            id="conversationSearch"
-            class="search search-panel"
-            placeholder="Buscar por cliente, número, protocolo ou atendente"
-          >
+        <input
+          type="text"
+          id="conversationSearch"
+          class="search search-panel"
+          placeholder="Buscar cliente, telefone, setor ou atendente"
+        >
       </div>
 
       <div class="topbar-actions">
         <div class="header-meta">
           <div class="header-user" id="headerUserMeta">
-            <strong id="headerUserName">{{ current_user.name if current_user.is_authenticated else 'Usuário' }}</strong>
+            <strong id="headerUserName">{{ current_user.name if current_user.is_authenticated else 'Usuario' }}</strong>
             <span id="headerUserRole">{{ current_user.role if current_user.is_authenticated else 'Atendente' }}</span>
           </div>
           <span class="status-pill" id="whatsappStatusTop">
             <span class="status-dot"></span>
             <span>WhatsApp logado</span>
           </span>
-          <a href="/logout" class="button soft logout-button">Logout</a>
-        </div>
-        <div class="ai-wrapper">
           <button class="button ai-toggle {% if not (company and company.settings and company.settings.central_ai_enabled) %}off{% endif %}" id="iaToggleBtn" type="button">
             {% if company and company.settings and company.settings.central_ai_enabled %}IA: Ligada{% else %}IA: Desligada{% endif %}
           </button>
+          <a href="/logout" class="button soft logout-button">Sair</a>
         </div>
       </div>
     </div>
+
+    <section class="operations-strip" aria-label="Resumo operacional">
+      <div class="metric-tile">
+        <span>Conversas abertas</span>
+        <strong id="kpiOpenConversations">0</strong>
+      </div>
+      <div class="metric-tile">
+        <span>Nao lidas</span>
+        <strong id="kpiUnreadConversations">0</strong>
+      </div>
+      <div class="metric-tile">
+        <span>SLA em risco</span>
+        <strong id="kpiSlaRisk">0</strong>
+      </div>
+      <div class="metric-tile">
+        <span>Em atendimento</span>
+        <strong id="kpiInService">0</strong>
+      </div>
+      <div class="metric-tile compact">
+        <span>Primeira resposta</span>
+        <strong id="kpiAverageFirstResponse">--</strong>
+      </div>
+    </section>
 
     <section class="workspace">
       <section class="card left-panel">
         <div class="panel-header">
           <div>
             <h3>Fila da central</h3>
-            <p>Conversas abertas e prontas para tratamento pela operacao.</p>
+            <p>Priorize novas mensagens, SLA e conversas sem responsavel.</p>
           </div>
           <span class="pill-count" id="conversationCount">0 ativas</span>
         </div>
 
         <div class="filters" id="conversationFilters">
           <button type="button" class="chip filter-chip active" data-filter="all">Todas</button>
-          <button type="button" class="chip filter-chip" data-filter="unread">Não lidas</button>
-          <button type="button" class="chip filter-chip" data-filter="mine">Meu setor</button>
+          <button type="button" class="chip filter-chip" data-filter="unread">Nao lidas</button>
+          <button type="button" class="chip filter-chip" data-filter="mine">Minhas</button>
           <button type="button" class="chip filter-chip" data-filter="sla">SLA em risco</button>
           <button type="button" class="chip filter-chip" data-filter="assigned">Assumidas</button>
         </div>
@@ -132,14 +153,14 @@
 
       <section class="card conversation-main">
         <div class="conversation-head">
-          <button class="mobile-back" id="mobileBackBtn" type="button" onclick="document.body.classList.remove('mobile-chat-open')">← Voltar para conversas</button>
+          <button class="mobile-back" id="mobileBackBtn" type="button" onclick="document.body.classList.remove('mobile-chat-open')">Voltar para conversas</button>
 
           <div class="conversation-head-top">
             <div class="profile">
               <div class="avatar" id="chatClientAvatar">?</div>
               <div>
                 <h3 id="chatClient">Selecione uma conversa</h3>
-                <p id="chatClientSubline">Telefone não disponível • Conversa</p>
+                <p id="chatClientSubline">Telefone nao disponivel | Conversa</p>
               </div>
             </div>
 
@@ -148,47 +169,47 @@
               <select id="sectorSelect" class="action-select">
                 <option value="">Enviar para setor...</option>
               </select>
-              <button class="button soft" id="assistantSuggestBtn" type="button">Sugestão IA</button>
+              <button class="button soft" id="assistantSuggestBtn" type="button">Sugestao IA</button>
               <button class="button soft d-none" id="toggleAllAttachmentsBtn" type="button">Selecionar todos</button>
               <button class="button soft d-none" id="downloadSelectedAttachmentsBtn" type="button">Baixar selecionados (.zip)</button>
-              <button class="button soft" id="markUnread" type="button">Marcar como não lida</button>
+              <button class="button soft" id="markUnread" type="button">Marcar como nao lida</button>
               <button class="button primary" id="detailToggleBtn" type="button">Detalhe</button>
             </div>
           </div>
 
           <div class="conversation-details-panel d-none" id="conversationDetailsPanel">
-          <div class="conversation-badges">
-            <span class="badge danger" id="chatSlaBadge">Sem status</span>
-            <span class="badge primary" id="chatSectorBadge">Setor: Central</span>
-            <span class="badge gray" id="chatAssignedBadge">Responsável: Não assumida</span>
-          </div>
+            <div class="conversation-badges">
+              <span class="badge danger" id="chatSlaBadge">Sem status</span>
+              <span class="badge primary" id="chatSectorBadge">Setor: Central</span>
+              <span class="badge gray" id="chatAssignedBadge">Responsavel: Nao assumida</span>
+            </div>
 
-          <div class="conversation-info">
-            <div class="mini-info">
-              <span>Canal</span>
-              <strong id="conversationInfoChannel">WhatsApp</strong>
+            <div class="conversation-info">
+              <div class="mini-info">
+                <span>Canal</span>
+                <strong id="conversationInfoChannel">WhatsApp</strong>
+              </div>
+              <div class="mini-info">
+                <span>Tempo em fila</span>
+                <strong id="conversationInfoQueue">-</strong>
+              </div>
+              <div class="mini-info">
+                <span>Ultima interacao</span>
+                <strong id="conversationInfoLastInteraction">-</strong>
+              </div>
+              <div class="mini-info">
+                <span>Prioridade</span>
+                <strong id="conversationInfoPriority">-</strong>
+              </div>
             </div>
-            <div class="mini-info">
-              <span>Tempo em fila</span>
-              <strong id="conversationInfoQueue">-</strong>
-            </div>
-            <div class="mini-info">
-              <span>Última interação</span>
-              <strong id="conversationInfoLastInteraction">-</strong>
-            </div>
-            <div class="mini-info">
-              <span>Prioridade</span>
-              <strong id="conversationInfoPriority">-</strong>
-            </div>
-          </div>
           </div>
         </div>
 
         <div class="assistant-suggestion-panel d-none" id="assistantSuggestionPanel">
           <div class="assistant-suggestion-head">
             <div>
-              <strong>Sugestão do Assistente</strong>
-              <div class="assistant-suggestion-meta" id="assistantSuggestionMeta">Use a IA para montar uma pré-resposta com base no histórico e no RAG.</div>
+              <strong>Sugestao do Assistente</strong>
+              <div class="assistant-suggestion-meta" id="assistantSuggestionMeta">Use a IA para montar uma pre-resposta com base no historico e no RAG.</div>
             </div>
             <div class="assistant-suggestion-actions">
               <button class="button soft" id="assistantRefreshBtn" type="button">Gerar novamente</button>
@@ -198,13 +219,18 @@
           <div class="assistant-suggestion-body" id="assistantSuggestionBody"></div>
         </div>
 
-        <div class="messages" id="chatMessages"></div>
+        <div class="messages" id="chatMessages">
+          <div class="empty-chat">
+            <strong>Selecione uma conversa</strong>
+            <span>A fila fica a esquerda. Ao abrir um atendimento, historico, SLA e a resposta aparecem aqui.</span>
+          </div>
+        </div>
 
         <div class="composer">
           <div class="composer-box">
             <div class="composer-input-wrap">
               <label class="composer-attach-btn media-upload-btn" id="attachShortcutBtn" title="Anexar arquivos">
-                📎
+                +
                 <input type="file" id="mediaInput" hidden multiple>
               </label>
 
@@ -236,12 +262,12 @@
         </div>
 
         <div class="card sector-card">
-          <h4>Histórico</h4>
+          <h4>Historico</h4>
           <div id="conversationHistory" class="conversation-history"></div>
         </div>
 
         <div class="card sector-card">
-          <h4>Métricas</h4>
+          <h4>Metricas</h4>
           <div id="conversationMetrics"></div>
         </div>
 
@@ -250,8 +276,6 @@
           <div id="whatsappStatus"></div>
         </div>
       </aside>
-
-
     </section>
   </main>
 
@@ -481,7 +505,7 @@
       if (chatMessages) chatMessages.innerHTML = "";
       if (chatClient) chatClient.textContent = "Selecione uma conversa";
       if (chatClientAvatar) chatClientAvatar.textContent = "?";
-      if (chatClientSubline) chatClientSubline.textContent = "Telefone nao disponivel • Conversa";
+      if (chatClientSubline) chatClientSubline.textContent = "Telefone nao disponivel | Conversa";
       if (conversationActions) conversationActions.classList.add("d-none");
       fallbackUpdateReplyState();
     }
@@ -599,7 +623,7 @@
         chatSectorBadge.textContent = "Setor: " + (item.sector || "Central");
       }
       if (chatAssignedBadge) {
-        chatAssignedBadge.textContent = "Responsável: " + (item.user_name || "Nao assumida");
+        chatAssignedBadge.textContent = "Responsavel: " + (item.user_name || "Nao assumida");
       }
       if (infoChannel) {
         infoChannel.textContent = "WhatsApp";
@@ -622,7 +646,7 @@
       }
 
       const phone = item.client_phone ? String(item.client_phone).replace("@s.whatsapp.net", "") : null;
-      const subline = phone ? phone + " • Conversa #" + conversationId : "Conversa #" + conversationId;
+      const subline = phone ? phone + " | Conversa #" + conversationId : "Conversa #" + conversationId;
       const chatClientSubline = document.getElementById("chatClientSubline");
       if (chatClientSubline) {
         chatClientSubline.textContent = subline;
@@ -908,7 +932,7 @@
       if (hint) {
         hint.textContent = fallbackIaEnabled
           ? "A IA ajuda a triar e orientar o atendimento da central."
-          : "A central está operando apenas com atendimento humano.";
+          : "A central esta operando apenas com atendimento humano.";
       }
 
       const button = document.getElementById("iaToggleBtn");
@@ -1087,7 +1111,7 @@
             .then(function () {
               sectorSelect.value = "";
               fallbackResetConversationPanel();
-              document.getElementById("chatClientSubline").textContent = "Telefone não disponível • Conversa";
+              document.getElementById("chatClientSubline").textContent = "Telefone nao disponivel | Conversa";
               document.getElementById("conversationActions")?.classList.add("d-none");
               fallbackLoadConversations({ keepSelection: false }).catch(function () {});
             })

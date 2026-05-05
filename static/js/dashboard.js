@@ -99,6 +99,15 @@ function formatConversationPhone(phone) {
   return String(phone).replace("@s.whatsapp.net", "");
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function getPriorityLabel(conversation) {
   if (!conversation) return "-";
   if (conversation.sla_breached) return "Alta";
@@ -806,18 +815,26 @@ function renderConversationList() {
       ? new Date(c.last_message_time).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
       : "-";
     const lastMessage = c.last_message || "Sem mensagens ainda";
+    const clientName = escapeHtml(c.client_name || "Sem nome");
+    const clientPhone = escapeHtml(formatConversationPhone(c.client_phone));
+    const sector = escapeHtml(c.sector || "Central");
+    const owner = c.assigned_to
+      ? escapeHtml(c.user_name || "Atendente")
+      : "Sem responsavel";
+    const unreadCount = Number(c.unread_count || 0);
 
     div.innerHTML = `
       <div class="conversation-layout">
         <div class="conversation-side">
-          <div class="conversation-avatar">${getInitials(c.client_name || "S")}</div>
-          <span class="badge primary conversation-sector-badge">${c.sector || "Central"}</span>
+          <div class="conversation-avatar ${!c.is_read ? "avatar-unread" : ""}">${escapeHtml(getInitials(c.client_name || "S"))}</div>
+          <span class="badge primary conversation-sector-badge" title="${sector}">${sector}</span>
         </div>
 
         <div class="conversation-body">
           <div class="conversation-top">
             <div class="conversation-text">
-              <strong>${c.client_name || "Sem nome"}</strong>
+              <strong>${clientName}</strong>
+              <div class="conversation-phone">${clientPhone}</div>
             </div>
             <span class="conversation-time-pill" title="${timeLabel}">
               ${exactTimeLabel}
@@ -825,12 +842,14 @@ function renderConversationList() {
           </div>
 
           <div class="conversation-preview conversation-preview-inline" title="${timeLabel}">
-            ${lastMessage}
+            ${escapeHtml(lastMessage)}
           </div>
 
           <div class="conversation-card-footer">
             <div class="conversation-badges">
-              <span class="badge ${statusBadge.tone}">${statusBadge.label}</span>
+              <span class="badge ${statusBadge.tone}">${escapeHtml(statusBadge.label)}</span>
+              <span class="badge gray">${owner}</span>
+              ${unreadCount > 0 ? `<span class="badge warning">${unreadCount} nova${unreadCount === 1 ? "" : "s"}</span>` : ""}
             </div>
           </div>
         </div>
@@ -843,7 +862,12 @@ function renderConversationList() {
   });
 
   if (!conversations.length) {
-    list.innerHTML = `<div class="sector-item">Nenhuma conversa encontrada com o filtro atual.</div>`;
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>Nenhuma conversa neste filtro</strong>
+        <span>Use a busca ou troque o filtro para encontrar outro atendimento.</span>
+      </div>
+    `;
   }
 }
 
@@ -902,7 +926,7 @@ function openConversation(id, silentRefresh = false) {
 
     const data = err?.response || {};
     if (data.assigned_to) {
-      alert(`Esta conversa jÃ¡ estÃ¡ sendo tratada por ${data.assigned_to}`);
+      alert(`Esta conversa ja esta sendo tratada por ${data.assigned_to}`);
       return;
     }
 
@@ -1455,7 +1479,7 @@ function sendMessage() {
 
 
 // ============================
-// NÃO LIDA
+// NAO LIDA
 // ============================
 function markUnread() {
   if (!currentConversationId) return;
