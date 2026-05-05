@@ -1,28 +1,18 @@
 import argparse
 import json
 import os
-import sys
-from copy import deepcopy
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
-from application import create_app
-from core.commercial_service import create_checkout_session, ensure_default_billing_plans
-from core.pagbank_service import build_pagbank_checkout_payload, get_pagbank_api_token, get_pagbank_base_url
-from db import db
+SANDBOX_BASE_URL = "https://sandbox.api.pagseguro.com"
 
 
-def _redact_headers(headers):
-    redacted = dict(headers)
-    if redacted.get("Authorization"):
-        redacted["Authorization"] = "Bearer ***REDACTED***"
-    return redacted
+def _now():
+    return datetime.now(timezone.utc)
 
 
 def _write_json(path, payload):
@@ -33,134 +23,168 @@ def _write_json(path, payload):
     )
 
 
-def _assert_sandbox():
+def _redact_headers(headers):
+    redacted = dict(headers)
+    if redacted.get("Authorization"):
+        redacted["Authorization"] = "Bearer ***REDACTED***"
+    return redacted
+
+
+def _sandbox_config():
     environment = (os.getenv("PAGBANK_ENVIRONMENT") or "").strip().lower()
-    base_url = get_pagbank_base_url()
+    base_url = (os.getenv("PAGBANK_API_BASE_URL") or SANDBOX_BASE_URL).strip().rstrip("/")
+    token = (os.getenv("PAGBANK_API_TOKEN") or "").strip().strip("'\"")
+
     if environment != "sandbox" or "sandbox.api.pagseguro.com" not in base_url:
         raise RuntimeError(
-            "Este script deve ser executado em sandbox. "
             "Configure PAGBANK_ENVIRONMENT=sandbox e "
-            "PAGBANK_API_BASE_URL=https://sandbox.api.pagseguro.com."
+            "PAGBANK_API_BASE_URL=https://sandbox.api.pagseguro.com antes de gerar a evidencia."
         )
-
-
-def _create_case(method, plan_code, base_url, timestamp):
-    installments = 12 if method == "card" else 1
-    email = f"homologacao+{timestamp}-{method}@appsul.com.br"
-    session = create_checkout_session(
-        plan_code=plan_code,
-        company_name=f"Appsul Homologacao PagBank {method.upper()}",
-        admin_name="Homologacao PagBank",
-        admin_email=email,
-        customer_document="52998224725",
-        payment_method=method,
-        installment_count=installments,
-        success_url=f"{base_url}/checkout/__token__/success",
-        cancel_url=f"{base_url}/planos",
-    )
-    session.success_url = f"{base_url}/checkout/{session.public_token}/success"
-    session.metadata_json = {
-        **(session.metadata_json or {}),
-        "success_url": session.success_url,
-    }
-    db.session.commit()
-    return session
-
-
-def _call_pagbank(session, base_url, timeout):
-    token = get_pagbank_api_token()
     if not token:
         raise RuntimeError("PAGBANK_API_TOKEN nao configurado.")
 
-    endpoint = f"{get_pagbank_base_url()}/checkouts"
-    payload = build_pagbank_checkout_payload(
-        session=session,
-        plan=session.plan,
-        webhook_url=f"{base_url}/webhooks/pagseguro",
-        return_url=session.success_url,
-    )
+    return base_url, token
+
+
+def _checkout_payload(payment_method, base_url, amount_cents, timestamp):
+    reference_id = f"appsul-hml-{payment_method.lower()}-{timestamp}-{secrets.token_hex(3)}"
+    expires_at = (_now() + timedelta(hours=24)).isoformat()
+    payment_methods = [{"type": payment_method}]
+    configs = []
+
+    if payment_method == "CREDIT_CARD":
+        configs = [
+            {
+                "type": "CREDIT_CARD",
+                "config_options": [
+                    {"option": "INSTALLMENTS_LIMIT", "value": "12"}
+                ],
+            }
+        ]
+
+    return {
+        "reference_id": reference_id,
+        "customer": {
+            "name": f"Homologacao PagBank {payment_method}",
+            "email": f"homologacao+{reference_id}@appsul.com.br",
+            "tax_id": "52998224725",
+        },
+        "customer_modifiable": True,
+        "items": [
+            {
+                "reference_id": "pro-monthly",
+                "name": "Profissional Mensal - Homologacao PagBank",
+                "quantity": 1,
+                "unit_amount": amount_cents,
+            }
+        ],
+        "payment_methods": payment_methods,
+        "payment_methods_configs": configs,
+        "notification_urls": [f"{base_url}/webhooks/pagseguro"],
+        "payment_notification_urls": [f"{base_url}/webhooks/pagseguro"],
+        "redirect_url": f"{base_url}/checkout/{reference_id}/success",
+        "return_url": f"{base_url}/checkout/{reference_id}/success",
+        "expiration_date": expires_at,
+        "soft_descriptor": (os.getenv("PAGBANK_SOFT_DESCRIPTOR") or "APPSUL").strip()[:17],
+    }
+
+
+def _call_checkout(api_base_url, token, platform_base_url, payment_method, amount_cents, timestamp, timeout):
+    endpoint = f"{api_base_url}/checkouts"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
+    payload = _checkout_payload(payment_method, platform_base_url, amount_cents, timestamp)
 
-    started_at = datetime.now(timezone.utc).isoformat()
-    response = requests.post(endpoint, json=payload, headers=headers, timeout=timeout)
-    finished_at = datetime.now(timezone.utc).isoformat()
-
+    started_at = _now().isoformat()
     try:
-        response_json = response.json()
-    except ValueError:
-        response_json = {"raw_text": response.text}
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=timeout)
+        finished_at = _now().isoformat()
+        try:
+            response_body = response.json()
+        except ValueError:
+            response_body = {"raw_text": response.text}
 
-    return {
-        "started_at": started_at,
-        "finished_at": finished_at,
-        "endpoint": endpoint,
-        "http_method": "POST",
-        "request": {
-            "headers": _redact_headers(headers),
-            "body": payload,
-        },
-        "response": {
-            "status_code": response.status_code,
-            "headers": {
-                "content-type": response.headers.get("content-type"),
-                "x-request-id": response.headers.get("x-request-id"),
+        return {
+            "payment_method": payment_method,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "endpoint": endpoint,
+            "http_method": "POST",
+            "request": {
+                "headers": _redact_headers(headers),
+                "body": payload,
             },
-            "body": response_json,
-        },
-    }
+            "response": {
+                "status_code": response.status_code,
+                "headers": {
+                    "content-type": response.headers.get("content-type"),
+                    "x-request-id": response.headers.get("x-request-id"),
+                },
+                "body": response_body,
+            },
+        }
+    except Exception as exc:
+        return {
+            "payment_method": payment_method,
+            "started_at": started_at,
+            "finished_at": _now().isoformat(),
+            "endpoint": endpoint,
+            "http_method": "POST",
+            "request": {
+                "headers": _redact_headers(headers),
+                "body": payload,
+            },
+            "response": {
+                "status_code": None,
+                "error": f"{type(exc).__name__}: {exc}",
+            },
+        }
 
 
 def main():
     parser = argparse.ArgumentParser(description="Gera evidencia de request/response PagBank em sandbox.")
-    parser.add_argument("--plan-code", default="pro-monthly", help="Codigo do plano usado nos checkouts.")
     parser.add_argument("--base-url", default=os.getenv("PLATFORM_BASE_URL", "https://app.appsul.com.br"))
-    parser.add_argument("--output", default="artifacts/pagbank_sandbox_evidence.json")
+    parser.add_argument("--output", default="/tmp/pagbank_sandbox_evidence.json")
+    parser.add_argument("--amount-cents", type=int, default=34900)
     parser.add_argument("--timeout", type=int, default=25)
     args = parser.parse_args()
 
-    _assert_sandbox()
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    api_base_url, token = _sandbox_config()
+    platform_base_url = args.base_url.rstrip("/")
+    timestamp = _now().strftime("%Y%m%d%H%M%S")
 
-    os.environ["BILLING_WORKER_ENABLED"] = "false"
-    app = create_app()
     evidence = {
         "title": "Evidencia de homologacao PagBank - Checkout Sandbox",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": _now().isoformat(),
         "environment": {
             "PAGBANK_ENVIRONMENT": os.getenv("PAGBANK_ENVIRONMENT"),
-            "PAGBANK_API_BASE_URL": get_pagbank_base_url(),
-            "PLATFORM_BASE_URL": args.base_url,
+            "PAGBANK_API_BASE_URL": api_base_url,
+            "PLATFORM_BASE_URL": platform_base_url,
         },
         "payment_methods_tested": ["CREDIT_CARD", "PIX"],
         "cases": [],
     }
 
-    with app.app_context():
-        ensure_default_billing_plans()
-        for method in ("card", "pix"):
-            session = _create_case(method, args.plan_code, args.base_url.rstrip("/"), timestamp)
-            case = _call_pagbank(session, args.base_url.rstrip("/"), args.timeout)
-            case["application_checkout_session"] = {
-                "public_token": session.public_token,
-                "plan_code": session.plan.code,
-                "payment_method": session.payment_method,
-                "installment_count": session.installment_count,
-                "amount_cents": session.amount_cents,
-                "success_url": session.success_url,
-            }
-            evidence["cases"].append(case)
+    for payment_method in evidence["payment_methods_tested"]:
+        evidence["cases"].append(
+            _call_checkout(
+                api_base_url=api_base_url,
+                token=token,
+                platform_base_url=platform_base_url,
+                payment_method=payment_method,
+                amount_cents=args.amount_cents,
+                timestamp=timestamp,
+                timeout=args.timeout,
+            )
+        )
 
     output_path = Path(args.output)
-    _write_json(output_path, deepcopy(evidence))
+    _write_json(output_path, evidence)
     print(f"Evidencia gerada em: {output_path}")
     for case in evidence["cases"]:
-        print(
-            f"{case['application_checkout_session']['payment_method']}: "
-            f"HTTP {case['response']['status_code']}"
-        )
+        print(f"{case['payment_method']}: HTTP {case['response'].get('status_code')}")
 
 
 if __name__ == "__main__":
