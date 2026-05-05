@@ -106,7 +106,7 @@ DEFAULT_BILLING_PLANS = [
         "billing_cycle_months": 0,
         "price_cents": 99000,
         "max_installments": 12,
-        "allow_boleto": True,
+        "allow_boleto": False,
         "highlight_text": None,
         "sort_order": 40,
         "metadata_json": {"users_label": "setup comercial"},
@@ -131,6 +131,9 @@ def ensure_default_billing_plans():
                 "billing_period",
                 "billing_cycle_months",
                 "price_cents",
+                "allow_pix",
+                "allow_boleto",
+                "allow_card",
                 "max_installments",
                 "highlight_text",
                 "sort_order",
@@ -212,15 +215,13 @@ def create_checkout_session(
         raise ValueError("Plano nao encontrado.")
 
     method = (payment_method or "card").strip().lower()
-    if method not in {"card", "pix", "boleto"}:
+    if method not in {"card", "pix"}:
         raise ValueError("Metodo de pagamento invalido.")
 
     if method == "card" and not plan.allow_card:
         raise ValueError("Este plano nao aceita cartao.")
     if method == "pix" and not plan.allow_pix:
         raise ValueError("Este plano nao aceita pix.")
-    if method == "boleto" and not plan.allow_boleto:
-        raise ValueError("Este plano nao aceita boleto.")
 
     installments = int(installment_count or 1)
     installments = max(1, installments)

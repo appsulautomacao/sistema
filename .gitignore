@@ -12,6 +12,7 @@ __pycache__/
 uploads/
 storage/
 files_rag/
+artifacts/
 
 *.tmp
 .tmp_*
