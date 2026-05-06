@@ -589,6 +589,30 @@ body > .container:has(.admin-shell) > .alert {
   gap: 10px;
 }
 
+.authorized-whatsapp-box {
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.authorized-whatsapp-box strong,
+.authorized-whatsapp-box p {
+  display: block;
+}
+
+.authorized-whatsapp-box p {
+  margin: 4px 0 0;
+  color: var(--admin-muted);
+}
+
+.authorized-whatsapp-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .whatsapp-qr-card {
   display: inline-flex;
   flex-direction: column;
@@ -936,6 +960,10 @@ body > .container:has(.admin-shell) > .alert {
   }
 
   .setup-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .authorized-whatsapp-form {
     grid-template-columns: 1fr;
   }
 

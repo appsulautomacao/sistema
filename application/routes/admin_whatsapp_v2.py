@@ -13,6 +13,7 @@ from adapters.whatsapp.service import (
     sync_instance_status,
     update_instance_status,
 )
+from core.whatsapp_authorization import get_authorized_whatsapp_number
 from models import Company
 from flask import abort
 
@@ -32,10 +33,12 @@ def whatsapp_page():
 
     company = Company.query.get(current_user.company_id)
     instance = get_company_whatsapp_instance(current_user.company_id)
+    authorized_number = get_authorized_whatsapp_number(current_user.company_id)
     return render_template(
         "admin/whatsapp.html",
         company=company,
         whatsapp_instance=instance,
+        authorized_whatsapp_number=authorized_number,
     )
 
 
@@ -44,6 +47,9 @@ def whatsapp_page():
 def connect_whatsapp():
     if current_user.role != "ADMIN":
         return abort(403)
+
+    if not get_authorized_whatsapp_number(current_user.company_id):
+        return redirect(url_for("admin_whatsapp.whatsapp_page"))
 
     instance = get_company_whatsapp_instance(current_user.company_id)
     if instance:
@@ -62,6 +68,9 @@ def connect_whatsapp():
 def qrcode():
     if current_user.role != "ADMIN":
         return abort(403)
+
+    if not get_authorized_whatsapp_number(current_user.company_id):
+        return redirect(url_for("admin_whatsapp.whatsapp_page"))
 
     instance = get_company_whatsapp_instance(current_user.company_id)
     if not instance:

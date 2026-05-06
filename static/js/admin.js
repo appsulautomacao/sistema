@@ -201,6 +201,11 @@ async function loadWhatsappQr(panel) {
   const button = panel.querySelector("[data-whatsapp-connect-button]");
   if (!area || !button) return;
 
+  if (!panel.dataset.authorizedNumber) {
+    area.innerHTML = `<div class="alert alert-warning mb-0">Salve primeiro o WhatsApp autorizado da empresa.</div>`;
+    return;
+  }
+
   button.disabled = true;
   button.textContent = "Gerando QR Code...";
   area.innerHTML = `<p class="text-muted mb-0">Criando conexao segura com o WhatsApp...</p>`;
@@ -252,19 +257,72 @@ function initAdminWhatsappPanel(root = document) {
     button.addEventListener("click", () => loadWhatsappQr(panel));
   }
 
+  const authorizedForm = panel.querySelector("[data-authorized-whatsapp-form]");
+  if (authorizedForm) {
+    authorizedForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const formData = new FormData(authorizedForm);
+      const submitButton = authorizedForm.querySelector("button");
+      if (submitButton) submitButton.disabled = true;
+
+      try {
+        const res = await fetch("/api/whatsapp/authorized-number", {
+          method: "POST",
+          credentials: "same-origin",
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          throw new Error(data.error || "Nao foi possivel salvar o numero.");
+        }
+
+        panel.dataset.authorizedNumber = data.number;
+        const box = panel.querySelector(".authorized-whatsapp-box");
+        if (box) {
+          box.innerHTML = `
+            <strong>WhatsApp autorizado</strong>
+            <p class="mb-0">Este painel so pode conectar o numero <code>${adminEscapeHtml(data.number)}</code>.</p>
+          `;
+        }
+        if (button) button.disabled = false;
+      } catch (error) {
+        const box = panel.querySelector(".authorized-whatsapp-box");
+        if (box) {
+          box.insertAdjacentHTML("beforeend", `<div class="alert alert-danger mt-2 mb-0">${adminEscapeHtml(error.message || "Erro ao salvar numero.")}</div>`);
+        }
+      } finally {
+        if (submitButton) submitButton.disabled = false;
+      }
+    });
+  }
+
   const pollStatus = async () => {
     try {
       const res = await fetch("/api/whatsapp/status", { credentials: "same-origin" });
       const data = await res.json();
       renderWhatsappStatus(panel, data.status);
+      if (data.status === "blocked_wrong_number") {
+        const area = panel.querySelector("[data-whatsapp-qr-area]");
+        if (area) {
+          area.innerHTML = `
+            <div class="alert alert-danger mb-0">
+              O numero conectado nao e o WhatsApp autorizado desta empresa. A conexao foi bloqueada.
+            </div>
+          `;
+        }
+        return;
+      }
       if (data.status === "open") {
         const area = panel.querySelector("[data-whatsapp-qr-area]");
         const actions = panel.querySelector(".whatsapp-actions");
         if (area) area.innerHTML = `<p class="text-muted mb-0">Conexao confirmada. Sua central ja pode receber mensagens.</p>`;
         if (actions) {
+          const centralLink = panel.dataset.canOpenCentral === "1"
+            ? `<a class="btn btn-outline-secondary" href="/dashboard">Ir para a central</a>`
+            : "";
           actions.innerHTML = `
             <a class="btn btn-outline-danger" href="/admin/whatsapp/disconnect">Desconectar WhatsApp</a>
-            <a class="btn btn-outline-secondary" href="/dashboard">Ir para a central</a>
+            ${centralLink}
           `;
         }
       }

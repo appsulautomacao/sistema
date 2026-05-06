@@ -9,6 +9,7 @@ from core.commercial_service import (
     list_public_billing_plans,
     register_provider_checkout,
 )
+from core.whatsapp_authorization import normalize_whatsapp_number
 from core.pagbank_service import create_pagbank_checkout, pagbank_is_configured
 
 
@@ -31,12 +32,18 @@ def start_checkout():
     admin_name = (request.form.get("admin_name") or "Admin").strip() or "Admin"
     admin_email = (request.form.get("admin_email") or "").strip().lower()
     customer_document = (request.form.get("customer_document") or "").strip()
+    whatsapp_number = (request.form.get("whatsapp_number") or "").strip()
     payment_method = (request.form.get("payment_method") or "card").strip().lower()
     installment_count = request.form.get("installment_count") or "1"
     coupon_code = (request.form.get("coupon_code") or "").strip()
 
     if not plan_code or not company_name or not admin_email:
         flash("Informe plano, empresa e e-mail do responsavel.", "warning")
+        return redirect(url_for("commercial.plans"))
+
+    normalized_whatsapp = normalize_whatsapp_number(whatsapp_number)
+    if not normalized_whatsapp:
+        flash("Informe um WhatsApp valido da empresa com DDD.", "warning")
         return redirect(url_for("commercial.plans"))
 
     try:
@@ -60,6 +67,8 @@ def start_checkout():
     session.metadata_json = {
         **(session.metadata_json or {}),
         "success_url": session.success_url,
+        "authorized_whatsapp_number": normalized_whatsapp,
+        "authorized_whatsapp_source": "checkout" if normalized_whatsapp else None,
     }
 
     from db import db

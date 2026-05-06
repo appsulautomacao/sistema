@@ -15,7 +15,9 @@
 
 <section class="whatsapp-connect-panel"
   data-whatsapp-panel
-  data-initial-status="{{ whatsapp_instance.status if whatsapp_instance else 'disconnected' }}">
+  data-initial-status="{{ whatsapp_instance.status if whatsapp_instance else 'disconnected' }}"
+  data-authorized-number="{{ authorized_whatsapp_number or '' }}"
+  data-can-open-central="{{ '1' if not is_super_admin else '0' }}">
   <div class="whatsapp-status-box" data-whatsapp-status-box>
     {% if whatsapp_instance and whatsapp_instance.status == 'open' %}
       <div class="alert alert-success mb-0">
@@ -34,6 +36,19 @@
   </div>
   {% endif %}
 
+  <div class="authorized-whatsapp-box mt-3">
+    <strong>WhatsApp autorizado</strong>
+    {% if authorized_whatsapp_number %}
+      <p class="mb-0">Este painel so pode conectar o numero <code>{{ authorized_whatsapp_number }}</code>.</p>
+    {% else %}
+      <p>Informe o WhatsApp contratado antes de gerar o QR Code. Depois disso, a conexao fica vinculada a esse numero.</p>
+      <form class="authorized-whatsapp-form" data-authorized-whatsapp-form>
+        <input class="form-control" type="tel" name="whatsapp_number" placeholder="Ex.: 48999999999" required>
+        <button class="btn btn-outline-primary" type="submit">Salvar numero</button>
+      </form>
+    {% endif %}
+  </div>
+
   <div class="whatsapp-qr-area mt-3" data-whatsapp-qr-area>
     {% if whatsapp_instance and whatsapp_instance.status == 'open' %}
       <p class="text-muted mb-0">Se precisar trocar o numero, desconecte este WhatsApp e conecte novamente.</p>
@@ -48,13 +63,15 @@
         Desconectar WhatsApp
       </a>
     {% else %}
-      <button class="btn btn-primary" type="button" data-whatsapp-connect-button>
+      <button class="btn btn-primary" type="button" data-whatsapp-connect-button {% if not authorized_whatsapp_number %}disabled{% endif %}>
         Gerar QR Code do WhatsApp
       </button>
     {% endif %}
+    {% if not is_super_admin %}
     <a class="btn btn-outline-secondary" href="/dashboard">
       Ir para a central
     </a>
+    {% endif %}
   </div>
 </section>
 
