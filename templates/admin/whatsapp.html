@@ -13,7 +13,7 @@
 
 <hr>
 
-{% if whatsapp_instance %}
+{% if whatsapp_instance and whatsapp_instance.status == 'open' %}
 
 <div class="alert alert-success">
 WhatsApp conectado
@@ -26,12 +26,18 @@ Instancia: {{ whatsapp_instance.instance_name }}
 {% else %}
 
 <div class="alert alert-warning">
-Nenhum WhatsApp conectado ainda
+WhatsApp ainda nao conectado
 </div>
+
+{% if whatsapp_instance %}
+<div class="small text-muted mb-3">
+Instancia criada. Clique abaixo para gerar o QR Code e concluir a conexao.
+</div>
+{% endif %}
 
 <a class="btn btn-primary"
 href="/admin/whatsapp/connect">
-Conectar meu WhatsApp
+Gerar QR Code do WhatsApp
 </a>
 
 {% endif %}
