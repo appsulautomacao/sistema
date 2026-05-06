@@ -179,6 +179,104 @@ function extractEmbeddedContent(html) {
   return container ? container.innerHTML : doc.body.innerHTML;
 }
 
+function renderWhatsappStatus(panel, status) {
+  const box = panel?.querySelector("[data-whatsapp-status-box]");
+  if (!box) return;
+
+  if (status === "open") {
+    box.innerHTML = `<div class="alert alert-success mb-0">WhatsApp conectado e pronto para atender.</div>`;
+    return;
+  }
+
+  if (status === "error") {
+    box.innerHTML = `<div class="alert alert-danger mb-0">Nao foi possivel consultar o status agora.</div>`;
+    return;
+  }
+
+  box.innerHTML = `<div class="alert alert-warning mb-0">WhatsApp ainda nao conectado.</div>`;
+}
+
+async function loadWhatsappQr(panel) {
+  const area = panel.querySelector("[data-whatsapp-qr-area]");
+  const button = panel.querySelector("[data-whatsapp-connect-button]");
+  if (!area || !button) return;
+
+  button.disabled = true;
+  button.textContent = "Gerando QR Code...";
+  area.innerHTML = `<p class="text-muted mb-0">Criando conexao segura com o WhatsApp...</p>`;
+
+  try {
+    const connectRes = await fetch("/api/whatsapp/connect", {
+      method: "POST",
+      credentials: "same-origin"
+    });
+    const connectData = await connectRes.json().catch(() => ({}));
+    if (!connectRes.ok || connectData.error) {
+      throw new Error(connectData.error || "Nao foi possivel iniciar a conexao.");
+    }
+
+    const qrRes = await fetch("/api/whatsapp/qrcode", { credentials: "same-origin" });
+    const qrData = await qrRes.json();
+    if (!qrRes.ok || qrData.error) {
+      throw new Error(qrData.error || "Nao foi possivel gerar o QR Code.");
+    }
+
+    if (qrData.qr) {
+      area.innerHTML = `
+        <div class="whatsapp-qr-card">
+          <img src="${qrData.qr}" alt="QR Code para conectar o WhatsApp">
+          <p>Abra o WhatsApp no celular da empresa, toque em aparelhos conectados e escaneie este QR Code.</p>
+        </div>
+      `;
+      button.textContent = "Gerar novo QR Code";
+      return;
+    }
+
+    area.innerHTML = `<div class="alert alert-warning mb-0">QR Code ainda nao disponivel. Tente novamente em alguns segundos.</div>`;
+    button.textContent = "Tentar novamente";
+  } catch (error) {
+    area.innerHTML = `<div class="alert alert-danger mb-0">${adminEscapeHtml(error.message || "Erro ao conectar WhatsApp.")}</div>`;
+    button.textContent = "Tentar novamente";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function initAdminWhatsappPanel(root = document) {
+  const panel = root.querySelector("[data-whatsapp-panel]");
+  if (!panel || panel.dataset.initialized === "1") return;
+  panel.dataset.initialized = "1";
+
+  const button = panel.querySelector("[data-whatsapp-connect-button]");
+  if (button) {
+    button.addEventListener("click", () => loadWhatsappQr(panel));
+  }
+
+  const pollStatus = async () => {
+    try {
+      const res = await fetch("/api/whatsapp/status", { credentials: "same-origin" });
+      const data = await res.json();
+      renderWhatsappStatus(panel, data.status);
+      if (data.status === "open") {
+        const area = panel.querySelector("[data-whatsapp-qr-area]");
+        const actions = panel.querySelector(".whatsapp-actions");
+        if (area) area.innerHTML = `<p class="text-muted mb-0">Conexao confirmada. Sua central ja pode receber mensagens.</p>`;
+        if (actions) {
+          actions.innerHTML = `
+            <a class="btn btn-outline-danger" href="/admin/whatsapp/disconnect">Desconectar WhatsApp</a>
+            <a class="btn btn-outline-secondary" href="/dashboard">Ir para a central</a>
+          `;
+        }
+      }
+    } catch {
+      renderWhatsappStatus(panel, "error");
+    }
+  };
+
+  pollStatus();
+  panel._whatsappStatusTimer = window.setInterval(pollStatus, 5000);
+}
+
 function shouldEmbedAdminUrl(url) {
   try {
     const parsed = new URL(url, window.location.origin);
@@ -189,7 +287,8 @@ function shouldEmbedAdminUrl(url) {
         || parsed.pathname === "/planos"
       )
       && !parsed.pathname.includes("/delete/")
-      && !parsed.pathname.includes("/toggle/");
+      && !parsed.pathname.includes("/toggle/")
+      && !parsed.pathname.includes("/disconnect");
   } catch {
     return false;
   }
@@ -216,6 +315,7 @@ async function loadAdminPanel(url, title, link) {
     if (!res.ok) throw new Error("Falha ao carregar conteudo");
     const html = await res.text();
     content.innerHTML = extractEmbeddedContent(html);
+    initAdminWhatsappPanel(content);
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
     content.innerHTML = `
@@ -267,4 +367,8 @@ document.addEventListener("click", event => {
   if (modal && event.target === modal) {
     closeConversationModal();
   }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  initAdminWhatsappPanel(document);
 });

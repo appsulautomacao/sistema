@@ -579,6 +579,41 @@ body > .container:has(.admin-shell) > .alert {
   color: var(--admin-muted);
 }
 
+.whatsapp-connect-panel {
+  max-width: 720px;
+}
+
+.whatsapp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.whatsapp-qr-card {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--admin-border);
+  border-radius: 18px;
+  background: #fff;
+  padding: 18px;
+  box-shadow: var(--admin-shadow);
+}
+
+.whatsapp-qr-card img {
+  width: min(280px, 70vw);
+  height: auto;
+  border-radius: 12px;
+}
+
+.whatsapp-qr-card p {
+  max-width: 420px;
+  margin: 0;
+  color: var(--admin-muted);
+  text-align: center;
+}
+
 .admin-results-list {
   margin-top: 14px;
   display: flex;
