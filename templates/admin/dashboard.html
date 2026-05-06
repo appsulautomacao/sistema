@@ -4,22 +4,33 @@
 <div class="admin-shell">
   <aside class="admin-sidebar" aria-label="Menu administrativo">
     <div class="admin-sidebar-brand">
-      <div class="admin-sidebar-mark">W</div>
-      <div>
-        <strong>WhatsApp SaaS</strong>
-        <span>{{ current_user.company.name if current_user.company else 'Operacao' }}</span>
+      <div class="admin-sidebar-logo">
+        {% if current_user.company and current_user.company.logo_url %}
+          <img src="{{ current_user.company.logo_url }}" alt="Logo da empresa">
+        {% else %}
+          <span>{{ (current_user.company.name[:1] if current_user.company and current_user.company.name else 'A')|upper }}</span>
+        {% endif %}
+      </div>
+      <div class="admin-sidebar-company">
+        <strong>{{ current_user.company.name if current_user.company else 'Appsul' }}</strong>
+        <span>Central de atendimento</span>
       </div>
     </div>
 
     <nav class="admin-side-nav">
-      <a class="active" href="/admin">Visao Geral</a>
-      <a href="/dashboard">Atendimentos</a>
+      <a class="active" href="/admin" data-admin-home>Inicio</a>
+      <a href="#operationalSummary">Atendimentos</a>
       <a href="#conversationSearchCard">Conversas</a>
       <a href="#chartsSection">Relatorios</a>
-      <a href="#qualitySection">Qualidade</a>
-      <a href="/admin/whatsapp">Integracoes</a>
-      <a href="/admin/ai-audit">Logs</a>
-      <a href="/admin/settings">Configuracoes</a>
+      <a href="#qualitySection">Qualidade do atendimento</a>
+      <a href="/admin/users" data-admin-embed-url="/admin/users">Equipe</a>
+      <a href="/admin/sectors" data-admin-embed-url="/admin/sectors">Setores</a>
+      <a href="/admin/whatsapp" data-admin-embed-url="/admin/whatsapp">WhatsApp</a>
+      <a href="/admin/ai-audit" data-admin-embed-url="/admin/ai-audit">Historico da IA</a>
+      <a href="/admin/ai-rag" data-admin-embed-url="/admin/ai-rag">Base de conhecimento</a>
+      <a href="/admin/ai-assistant" data-admin-embed-url="/admin/ai-assistant">Assistente virtual</a>
+      <a href="/admin/settings" data-admin-embed-url="/admin/settings">Configuracoes</a>
+      <a href="/planos" data-admin-embed-url="/planos">Planos</a>
     </nav>
   </aside>
 
@@ -28,7 +39,7 @@
       <div>
         <span class="admin-eyebrow">Painel do cliente</span>
         <h1>Painel Administrativo</h1>
-        <p>Acompanhe a saude da sua operacao em tempo real.</p>
+        <p>Acompanhe sua equipe, conversas e prazos de resposta em tempo real.</p>
       </div>
       <div class="period-filter" aria-label="Filtro visual de periodo">
         <button type="button" class="active">Hoje</button>
@@ -37,6 +48,7 @@
       </div>
     </header>
 
+    <section class="admin-dashboard-home" id="adminDashboardHome">
     <section class="admin-kpi-grid" aria-label="Metricas principais">
       <article class="admin-kpi-card status-card" data-whatsapp-status-card>
         <div class="kpi-icon success">W</div>
@@ -68,16 +80,16 @@
 
       <article class="admin-kpi-card">
         <div class="kpi-icon orange">TM</div>
-        <span>Tempo medio</span>
+        <span>Tempo medio de resposta</span>
         <strong>{{ metrics.avg_response }} min</strong>
         <small>Primeira resposta</small>
       </article>
 
       <article class="admin-kpi-card">
-        <div class="kpi-icon red">SLA</div>
-        <span>SLA estourado</span>
+        <div class="kpi-icon red">PR</div>
+        <span>Prazo vencido</span>
         <strong>{{ metrics.sla_breached }}</strong>
-        <small>Alertas em conversas abertas</small>
+        <small>Atendimentos fora do prazo</small>
       </article>
 
       <article class="admin-kpi-card">
@@ -91,7 +103,7 @@
         <div class="kpi-icon muted">CS</div>
         <span>Satisfacao</span>
         <strong>{% if operational_summary.satisfaction is not none %}{{ operational_summary.satisfaction }}%{% else %}--{% endif %}</strong>
-        <small>Aguardando endpoint de CSAT</small>
+        <small>Aguardando pesquisa de satisfacao</small>
       </article>
     </section>
 
@@ -149,7 +161,7 @@
           <div class="card-head">
             <div>
               <h2>Graficos</h2>
-              <p>Leitura rapida de volume, desempenho e SLA.</p>
+              <p>Leitura rapida de volume, desempenho e prazos.</p>
             </div>
           </div>
 
@@ -163,14 +175,14 @@
               <canvas id="volumeChart"></canvas>
             </div>
             <div class="chart-panel placeholder-chart" id="qualitySection">
-              <h3>SLA por setor</h3>
+              <h3>Prazo por setor</h3>
               <div class="placeholder-bars">
                 <span style="height: 72%"></span>
                 <span style="height: 48%"></span>
                 <span style="height: 58%"></span>
                 <span style="height: 34%"></span>
               </div>
-              <p>Placeholder visual. Conectar a /api/metrics/sectors/routing em uma proxima etapa.</p>
+              <p>Placeholder visual. Conectar dados de prazo por setor em uma proxima etapa.</p>
             </div>
           </div>
         </section>
@@ -214,7 +226,7 @@
         </section>
       </div>
 
-      <aside class="admin-column-side">
+      <aside class="admin-column-side" id="operationalSummary">
         <section class="admin-card side-card">
           <div class="card-head compact">
             <h2>Resumo Operacional</h2>
@@ -223,7 +235,7 @@
             <div class="ops-row blue"><span>Fila atual</span><strong>{{ operational_summary.queue }}</strong></div>
             <div class="ops-row green"><span>Em atendimento</span><strong>{{ operational_summary.assigned }}</strong></div>
             <div class="ops-row orange"><span>Nao lidas</span><strong>{{ operational_summary.unread }}</strong></div>
-            <div class="ops-row red"><span>Alertas SLA</span><strong>{{ operational_summary.sla }}</strong></div>
+            <div class="ops-row red"><span>Fora do prazo</span><strong>{{ operational_summary.sla }}</strong></div>
           </div>
         </section>
 
@@ -255,7 +267,7 @@
               <div class="activity-item"><span class="activity-dot red"></span><div><strong>WhatsApp desconectado</strong><small>Verifique a integracao</small></div></div>
             {% endif %}
             {% if operational_summary.sla == 0 %}
-              <div class="activity-item"><span class="activity-dot green"></span><div><strong>Nenhum alerta SLA</strong><small>Operacao sem estouro aberto</small></div></div>
+              <div class="activity-item"><span class="activity-dot green"></span><div><strong>Nenhum prazo vencido</strong><small>Operacao dentro do prazo</small></div></div>
             {% endif %}
             {% for event in recent_events %}
               <div class="activity-item">
@@ -287,6 +299,22 @@
           </div>
         </section>
       </aside>
+    </section>
+    </section>
+
+    <section class="admin-dynamic-panel d-none" id="adminDynamicPanel" aria-live="polite">
+      <div class="admin-card">
+        <div class="card-head">
+          <div>
+            <h2 id="adminDynamicTitle">Carregando</h2>
+            <p id="adminDynamicSubtitle">O conteudo sera aberto aqui, sem sair do painel.</p>
+          </div>
+          <button type="button" class="admin-secondary-button" data-admin-home>Voltar ao inicio</button>
+        </div>
+        <div id="adminDynamicContent" class="admin-dynamic-content">
+          <div class="empty-state">Carregando...</div>
+        </div>
+      </div>
     </section>
   </section>
 </div>

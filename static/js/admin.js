@@ -156,6 +156,60 @@ function refreshAdminWhatsappStatus() {
     });
 }
 
+function setAdminNavActive(link) {
+  document.querySelectorAll(".admin-side-nav a").forEach(item => {
+    item.classList.toggle("active", item === link);
+  });
+}
+
+function showAdminHome() {
+  const home = document.getElementById("adminDashboardHome");
+  const panel = document.getElementById("adminDynamicPanel");
+  const content = document.getElementById("adminDynamicContent");
+  if (home) home.classList.remove("d-none");
+  if (panel) panel.classList.add("d-none");
+  if (content) content.innerHTML = `<div class="empty-state">Carregando...</div>`;
+}
+
+function extractEmbeddedContent(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  doc.querySelectorAll("nav.navbar, script, link[rel='stylesheet'], style").forEach(node => node.remove());
+  const container = doc.querySelector(".container");
+  return container ? container.innerHTML : doc.body.innerHTML;
+}
+
+async function loadAdminPanel(url, title, link) {
+  const home = document.getElementById("adminDashboardHome");
+  const panel = document.getElementById("adminDynamicPanel");
+  const content = document.getElementById("adminDynamicContent");
+  const titleEl = document.getElementById("adminDynamicTitle");
+  if (!panel || !content) {
+    window.location.href = url;
+    return;
+  }
+
+  setAdminNavActive(link);
+  if (home) home.classList.add("d-none");
+  panel.classList.remove("d-none");
+  if (titleEl) titleEl.textContent = title || "Painel";
+  content.innerHTML = `<div class="empty-state">Carregando...</div>`;
+
+  try {
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (!res.ok) throw new Error("Falha ao carregar conteudo");
+    const html = await res.text();
+    content.innerHTML = extractEmbeddedContent(html);
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    content.innerHTML = `
+      <div class="empty-state">
+        Nao foi possivel abrir esta area aqui. <a href="${url}">Abrir pagina completa</a>
+      </div>
+    `;
+  }
+}
+
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     closeConversationModal();
@@ -163,6 +217,25 @@ document.addEventListener("keydown", event => {
 });
 
 document.addEventListener("click", event => {
+  const homeTrigger = event.target.closest("[data-admin-home]");
+  if (homeTrigger) {
+    event.preventDefault();
+    showAdminHome();
+    setAdminNavActive(document.querySelector(".admin-side-nav a[data-admin-home]"));
+    return;
+  }
+
+  const embeddedLink = event.target.closest("[data-admin-embed-url]");
+  if (embeddedLink) {
+    event.preventDefault();
+    loadAdminPanel(
+      embeddedLink.getAttribute("data-admin-embed-url"),
+      embeddedLink.textContent.trim(),
+      embeddedLink
+    );
+    return;
+  }
+
   const modal = document.getElementById("conversationModal");
   if (modal && event.target === modal) {
     closeConversationModal();

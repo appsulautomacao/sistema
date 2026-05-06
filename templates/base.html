@@ -17,6 +17,18 @@
 
     <div class="d-flex gap-2 flex-wrap">
 
+        {% if current_user.is_authenticated and request.endpoint and request.endpoint.startswith("admin.") %}
+
+            <span class="navbar-text text-light small">
+                {{ current_user.name }}
+            </span>
+
+            <a class="btn btn-sm btn-outline-light" href="/logout">
+                Sair
+            </a>
+
+        {% else %}
+
         <a class="btn btn-sm btn-outline-light" href="/planos">
             Planos
         </a>
@@ -64,6 +76,8 @@
                     Entrar
                 </a>
             {% endif %}
+
+        {% endif %}
 
         {% endif %}
 

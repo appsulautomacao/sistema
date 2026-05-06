@@ -68,30 +68,48 @@ body > .container:has(.admin-shell) > .alert {
 
 .admin-sidebar-brand {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
   padding: 0 4px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   margin-bottom: 18px;
 }
 
-.admin-sidebar-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+.admin-sidebar-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
   background: #12335e;
   color: #fff;
   font-weight: 900;
+  overflow: hidden;
 }
 
-.admin-sidebar-brand strong,
-.admin-sidebar-brand span {
+.admin-sidebar-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-sidebar-logo span {
+  font-size: 22px;
+}
+
+.admin-sidebar-company strong,
+.admin-sidebar-company span {
   display: block;
 }
 
-.admin-sidebar-brand span {
+.admin-sidebar-company strong {
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.admin-sidebar-company span {
   color: #94a3b8;
   font-size: 12px;
   margin-top: 2px;
@@ -120,6 +138,11 @@ body > .container:has(.admin-shell) > .alert {
 .admin-main {
   min-width: 0;
   padding: 22px;
+}
+
+.admin-dashboard-home,
+.admin-dynamic-panel {
+  min-width: 0;
 }
 
 .admin-page-head {
@@ -456,6 +479,37 @@ body > .container:has(.admin-shell) > .alert {
   background: var(--admin-blue);
   color: #fff;
   font-weight: 850;
+}
+
+.admin-secondary-button {
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--admin-text);
+  padding: 9px 12px;
+  font-weight: 850;
+}
+
+.admin-dynamic-panel.d-none {
+  display: none !important;
+}
+
+.admin-dynamic-content {
+  min-height: 360px;
+}
+
+.admin-dynamic-content > .container,
+.admin-dynamic-content .container {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+  margin: 0 !important;
+}
+
+.admin-dynamic-content .navbar,
+.admin-dynamic-content script,
+.admin-dynamic-content link[rel="stylesheet"] {
+  display: none !important;
 }
 
 .admin-results-list {
