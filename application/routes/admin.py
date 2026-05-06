@@ -30,6 +30,38 @@ RAG_ALLOWED_EXTENSIONS = {"txt", "md", "csv"}
 LOGO_ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "svg"}
 LOGO_UPLOAD_BASE_DIR = "static/uploads"
 
+
+def ensure_central_sector(company_id):
+    central = Sector.query.filter(
+        Sector.company_id == company_id,
+        func.lower(Sector.name) == "central"
+    ).first()
+
+    if central:
+        if not central.is_central:
+            central.is_central = True
+            db.session.commit()
+        return central
+
+    central = Sector(
+        name="Central",
+        company_id=company_id,
+        is_central=True,
+        is_active=True
+    )
+    db.session.add(central)
+    db.session.flush()
+
+    settings = CompanySettings.query.filter_by(company_id=company_id).first()
+    if not settings:
+        settings = CompanySettings(company_id=company_id)
+        db.session.add(settings)
+    settings.central_sector_id = central.id
+
+    db.session.commit()
+    return central
+
+
 def parse_time(value):
     from datetime import datetime
     try:
@@ -61,6 +93,9 @@ def settings():
     if not settings:
         settings = CompanySettings(company_id=current_user.company_id)
         db.session.add(settings)
+        db.session.commit()
+
+    ensure_central_sector(current_user.company_id)
 
     if request.method == "POST":
         company_name = (request.form.get("company_name") or "").strip()
@@ -119,7 +154,8 @@ def settings():
 
         current_user.company.rag_document_path = (request.form.get("rag_document_path") or "").strip() or None
 
-        settings.sla_minutes = int(request.form.get("sla_minutes") or 0)
+        if "sla_minutes" in request.form:
+            settings.sla_minutes = int(request.form.get("sla_minutes") or 0)
 
         start = request.form.get("business_hours_start")
         end = request.form.get("business_hours_end")
@@ -130,14 +166,28 @@ def settings():
         if end and end.strip():
             settings.business_hours_end = parse_time(end)
 
-        settings.auto_assign = "auto_assign" in request.form
-        settings.plan = request.form.get("plan")
-        settings.sla_alert_minutes = int(request.form.get("sla_alert_minutes") or 0)
-        settings.central_ai_enabled = "central_ai_enabled" in request.form
-        settings.ai_classifier_model = (request.form.get("ai_classifier_model") or "gpt-4o-mini").strip()
-        settings.ai_classifier_prompt = (request.form.get("ai_classifier_prompt") or "").strip() or None
-        settings.ai_assistant_model = (request.form.get("ai_assistant_model") or "gpt-4o-mini").strip()
-        settings.ai_assistant_prompt = (request.form.get("ai_assistant_prompt") or "").strip() or None
+        if "auto_assign" in request.form:
+            settings.auto_assign = True
+        elif "settings_basic_form" in request.form:
+            settings.auto_assign = False
+
+        if "plan" in request.form:
+            settings.plan = request.form.get("plan")
+
+        if "sla_alert_minutes" in request.form:
+            settings.sla_alert_minutes = int(request.form.get("sla_alert_minutes") or 0)
+
+        if "central_ai_enabled" in request.form or "settings_basic_form" in request.form:
+            settings.central_ai_enabled = "central_ai_enabled" in request.form
+
+        if "ai_classifier_model" in request.form:
+            settings.ai_classifier_model = (request.form.get("ai_classifier_model") or "gpt-4o-mini").strip()
+        if "ai_classifier_prompt" in request.form:
+            settings.ai_classifier_prompt = (request.form.get("ai_classifier_prompt") or "").strip() or None
+        if "ai_assistant_model" in request.form:
+            settings.ai_assistant_model = (request.form.get("ai_assistant_model") or "gpt-4o-mini").strip()
+        if "ai_assistant_prompt" in request.form:
+            settings.ai_assistant_prompt = (request.form.get("ai_assistant_prompt") or "").strip() or None
 
         db.session.commit()
         flash("Configurações da empresa atualizadas com sucesso.", "success")
@@ -197,6 +247,8 @@ def users():
 
     if current_user.role != "ADMIN":
         return "Acesso negado", 403
+
+    ensure_central_sector(current_user.company_id)
 
     users = User.query.filter_by(
         company_id=current_user.company_id
@@ -465,6 +517,7 @@ def admin_home():
         return redirect("/dashboard")
 
     company_id = current_user.company_id
+    ensure_central_sector(company_id)
     today = datetime.utcnow().date()
 
     open_conversations = Conversation.query.filter_by(
@@ -717,6 +770,8 @@ def sectors():
 
     if current_user.role != "ADMIN":
         return "Acesso negado", 403
+
+    ensure_central_sector(current_user.company_id)
 
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()

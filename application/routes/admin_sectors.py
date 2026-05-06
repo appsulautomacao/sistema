@@ -13,11 +13,44 @@ admin_sectors_bp = Blueprint(
 )
 
 
+def ensure_central_sector(company_id):
+    central = Sector.query.filter(
+        Sector.company_id == company_id,
+        func.lower(Sector.name) == "central"
+    ).first()
+
+    if central:
+        if not central.is_central:
+            central.is_central = True
+            db.session.commit()
+        return central
+
+    central = Sector(
+        name="Central",
+        company_id=company_id,
+        is_central=True,
+        is_active=True,
+    )
+    db.session.add(central)
+    db.session.flush()
+
+    settings = CompanySettings.query.filter_by(company_id=company_id).first()
+    if not settings:
+        settings = CompanySettings(company_id=company_id)
+        db.session.add(settings)
+    settings.central_sector_id = central.id
+
+    db.session.commit()
+    return central
+
+
 @admin_sectors_bp.route("/")
 @login_required
 def list_sectors():
     if current_user.role != "ADMIN":
         return "Acesso negado", 403
+
+    ensure_central_sector(current_user.company_id)
 
     sectors = Sector.query.filter_by(
         company_id=current_user.company_id

@@ -2,31 +2,36 @@
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="container mt-4 admin-simple-page">
 
+<div class="admin-simple-head">
+<div>
 <h3>Conectar WhatsApp</h3>
+<p>Conecte o numero principal da empresa para receber e responder mensagens na central.</p>
+</div>
+</div>
 
 <hr>
 
 {% if whatsapp_instance %}
 
 <div class="alert alert-success">
-WhatsApp conectado: {{ whatsapp_instance.instance_name }}
+WhatsApp conectado
 </div>
 
 <div class="small text-muted mb-3">
-Webhook secret: {{ whatsapp_instance.webhook_secret }}
+Instancia: {{ whatsapp_instance.instance_name }}
 </div>
 
 {% else %}
 
 <div class="alert alert-warning">
-Nenhum WhatsApp conectado
+Nenhum WhatsApp conectado ainda
 </div>
 
 <a class="btn btn-primary"
 href="/admin/whatsapp/connect">
-Conectar WhatsApp
+Conectar meu WhatsApp
 </a>
 
 {% endif %}

@@ -2,13 +2,18 @@
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="container mt-4 admin-simple-page">
 
-<h3>Setores da Empresa</h3>
+<div class="admin-simple-head">
+<div>
+<h3>Setores de atendimento</h3>
+<p>Organize para onde as conversas serao encaminhadas. O setor Central ja fica criado automaticamente.</p>
+</div>
+</div>
 
 <hr>
 
-<h5>Criar setor</h5>
+<h5>Criar novo setor</h5>
 
 <form method="POST" action="/admin/sectors/create">
 
@@ -24,7 +29,7 @@ required>
 <div class="col-md-3">
 <input class="form-control"
 name="sla_minutes"
-placeholder="SLA (min)"
+placeholder="Prazo de resposta (min)"
 type="number"
 min="1">
 </div>
@@ -48,7 +53,7 @@ Criar Setor
 <tr>
 <th>Setor</th>
 <th>Tipo</th>
-<th>SLA (min)</th>
+<th>Prazo (min)</th>
 <th>Acoes</th>
 </tr>
 

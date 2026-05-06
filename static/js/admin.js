@@ -179,6 +179,22 @@ function extractEmbeddedContent(html) {
   return container ? container.innerHTML : doc.body.innerHTML;
 }
 
+function shouldEmbedAdminUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.origin === window.location.origin
+      && (
+        parsed.pathname.startsWith("/admin/")
+        || parsed.pathname === "/admin"
+        || parsed.pathname === "/planos"
+      )
+      && !parsed.pathname.includes("/delete/")
+      && !parsed.pathname.includes("/toggle/");
+  } catch {
+    return false;
+  }
+}
+
 async function loadAdminPanel(url, title, link) {
   const home = document.getElementById("adminDashboardHome");
   const panel = document.getElementById("adminDynamicPanel");
@@ -232,6 +248,17 @@ document.addEventListener("click", event => {
       embeddedLink.getAttribute("data-admin-embed-url"),
       embeddedLink.textContent.trim(),
       embeddedLink
+    );
+    return;
+  }
+
+  const dynamicPanelLink = event.target.closest("#adminDynamicContent a[href]");
+  if (dynamicPanelLink && shouldEmbedAdminUrl(dynamicPanelLink.href)) {
+    event.preventDefault();
+    loadAdminPanel(
+      dynamicPanelLink.getAttribute("href"),
+      dynamicPanelLink.textContent.trim() || "Painel",
+      document.querySelector(`.admin-side-nav a[data-admin-embed-url="${dynamicPanelLink.getAttribute("href")}"]`)
     );
     return;
   }
